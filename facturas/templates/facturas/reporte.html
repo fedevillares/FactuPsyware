@@ -1,0 +1,108 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reporte mensual — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container">
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Resumen del período</p>
+                <h1 class="page-title" style="margin:0;">Reporte mensual</h1>
+            </div>
+        </div>
+
+        <form method="get" class="filter-bar" style="margin-bottom:24px;">
+            <select name="mes" class="filter-select" onchange="this.form.submit()" aria-label="Mes del reporte">
+                {% for valor, nombre in meses %}
+                <option value="{{ valor }}" {% if valor == mes %}selected{% endif %}>{{ nombre }}</option>
+                {% endfor %}
+            </select>
+            <select name="anio" class="filter-select" onchange="this.form.submit()" aria-label="Año del reporte">
+                {% for a in anios_disponibles %}
+                <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <div class="stat-strip" style="margin-bottom:28px;">
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M3.75 9.75h16.5M8.25 3v3M15.75 3v3"/></svg></div>
+                <div class="stat-value">{{ cantidad_total }}</div>
+                <div class="stat-label">Comprobantes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M16.5 6.75c0-1.657-2.015-3-4.5-3s-4.5 1.343-4.5 3 2.015 3 4.5 3 4.5 1.343 4.5 3-2.015 3-4.5 3-4.5-1.343-4.5-3"/></svg></div>
+                <div class="stat-value">${{ total_facturado|floatformat:2 }}</div>
+                <div class="stat-label">Neto facturado</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 4.5l-15 15M8.25 6.75a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM18.75 17.25a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg></div>
+                <div class="stat-value">${{ total_iva|floatformat:2 }}</div>
+                <div class="stat-label">IVA</div>
+            </div>
+            {% if total_devuelto %}
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 15L3.75 9.75 9 4.5M3.75 9.75h9a6.75 6.75 0 016.75 6.75v3"/></svg></div>
+                <div class="stat-value" style="color:var(--danger);">−${{ total_devuelto|floatformat:2 }}</div>
+                <div class="stat-label">Notas de Crédito</div>
+            </div>
+            {% endif %}
+            <div class="stat-card is-accent">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.25 12.75l4.5 4.5 9-10.5"/></svg></div>
+                <div class="stat-value">${{ total_general|floatformat:2 }}</div>
+                <div class="stat-label">Total general</div>
+            </div>
+        </div>
+
+        <div class="card">
+            {% if facturas_mes %}
+            <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Tipo</th>
+                        <th>Número</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th style="text-align:right;">Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for factura in facturas_mes %}
+                    <tr>
+                        <td class="faint" style="font-size:12px;">{{ factura.id }}</td>
+                        <td>{{ factura.get_tipo_comprobante_display }}</td>
+                        <td class="mono">{{ factura.numero_completo }}</td>
+                        <td>{{ factura.cliente.nombre_completo }}</td>
+                        <td>{{ factura.fecha_emision|date:"d/m/Y" }}</td>
+                        <td class="mono" style="text-align:right; {% if factura.es_nota_credito %}color:var(--danger);{% endif %}">
+                            {% if factura.es_nota_credito %}−{% endif %}${{ factura.total|floatformat:2 }}
+                        </td>
+                        <td><div class="col-acciones">
+                            <a href="{% url 'detalle_factura' factura.id %}" class="btn btn-outline btn-icon" title="Ver factura" aria-label="Ver factura"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><circle cx="12" cy="12" r="3"/></svg></a>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M3.75 9.75h16.5M8.25 3v3M15.75 3v3"/></svg></div>
+                <p>No hay comprobantes autorizados en el período seleccionado.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

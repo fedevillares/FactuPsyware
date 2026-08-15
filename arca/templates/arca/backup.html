@@ -86,7 +86,7 @@
                         <label for="clave_confirmacion_import">Confirmá tu contraseña</label>
                         <input type="password" id="clave_confirmacion_import" name="clave_confirmacion" required autocomplete="current-password">
                     </div>
-                    <button type="submit" class="btn btn-outline" style="color:var(--danger); border-color:var(--danger); margin-top:8px;">
+                    <button type="submit" class="btn btn-danger" style="margin-top:8px;">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 7.5L12 3m0 0l4.5 4.5M12 3v13.5"/></svg> Restaurar desde archivo
                     </button>
                 </form>
@@ -125,7 +125,7 @@
                                   onsubmit="return confirm('¿Eliminar el backup {{ b.nombre }}? Esta acción no se puede deshacer.')">
                                 {% csrf_token %}
                                 <input type="hidden" name="nombre" value="{{ b.nombre }}">
-                                <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:var(--danger);">Eliminar</button>
+                                <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
                             </form>
                         </div></td>
                     </tr>

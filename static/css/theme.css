@@ -26,7 +26,7 @@ html:root {
     --accent-soft: #3C5E48;
     --on-accent: #F7F9F4;
     --border: #E6E1D2;
-    --border-strong: #CFC9B4;
+    --border-strong: #A9A18A; /* contraste ≥3:1 sobre --bg-card (WCAG 1.4.11) */
     --success: #2B4734;
     --danger: #8A3324;
     --secondary: #8C8470;
@@ -72,7 +72,7 @@ html[data-theme="dark"] {
     --accent-soft: #7AA588;
     --on-accent: #12160F;
     --border: #2E3226;
-    --border-strong: #3D4233;
+    --border-strong: #5A6049; /* contraste ≥3:1 sobre --bg-card oscuro (WCAG 1.4.11) */
     --success: #8FB89C;
     --danger: #DD9C84;
     --secondary: #767259;

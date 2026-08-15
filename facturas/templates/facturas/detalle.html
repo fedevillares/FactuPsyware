@@ -1,134 +1,302 @@
-{% load static %}
+{% load static l10n %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Factura #{{ factura.id }}</title>
+    <title>{{ factura.get_tipo_comprobante_display }} {{ factura.numero_completo }} — FactuPsyware</title>
     <link href="{% static 'css/theme.css' %}" rel="stylesheet">
     <script src="{% static 'js/theme.js' %}"></script>
 </head>
 <body>
-    <div class="app-header">
-        <div class="brand">
-            <img src="{% static 'img/logo.png' %}" alt="logo">
-            <span>Facturación</span>
-        </div>
-        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
-    </div>
+    {% include "_nav.html" %}
 
-    <div class="app-container">
-        <a href="{% url 'listado_facturas' %}" class="btn btn-outline btn-sm" style="margin-bottom:16px;">&larr; Volver al listado</a>
+    <div class="app-container" style="max-width:820px;">
+        <a href="{% url 'listado_facturas' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver al listado</a>
+
+        {% if mensaje %}
+        <div class="alert {% if exito %}alert-success{% else %}alert-danger{% endif %}">
+            {{ mensaje }}
+        </div>
+        {% endif %}
+
+        {% if factura.estado == 'ERROR' and factura.error_arca %}
+        <div class="alert alert-danger">
+            <strong>Rechazo de ARCA:</strong> {{ factura.error_arca }}
+        </div>
+        {% endif %}
+
+        {% if factura.estado == 'EMITIENDO' %}
+        <div class="alert alert-danger">
+            <strong>Emisión en curso o interrumpida.</strong> Esta factura quedó a mitad de una
+            autorización con ARCA. Si esta pantalla persiste, puede que ARCA ya haya otorgado
+            un CAE que no llegó a guardarse: <em>no la vuelvas a emitir ni la elimines</em>.
+            Revisá <code>logs/arca_emisiones.log</code> (ahí queda el número y CAE si se otorgó)
+            o consultá el último comprobante autorizado en el panel de verificación antes de decidir.
+        </div>
+        {% endif %}
 
         <div class="card">
+            <div class="card-header" style="background:var(--bg-sunken);">
+                <div>
+                    <p class="page-eyebrow" style="margin:0 0 4px;">{{ factura.get_tipo_comprobante_display }}</p>
+                    <span style="font-family:var(--font-mono); font-size:18px; font-weight:700; letter-spacing:0.02em;">
+                        N° {{ factura.numero_completo }}
+                    </span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    {% if factura.estado == 'AUTORIZADA' %}
+                        <span class="stamp stamp-autorizada">Autorizada</span>
+                    {% elif factura.estado == 'ERROR' %}
+                        <span class="stamp stamp-error">Rechazada</span>
+                    {% elif factura.estado == 'EMITIENDO' %}
+                        <span class="stamp stamp-error">Emitiendo…</span>
+                    {% else %}
+                        <span class="stamp stamp-borrador">Borrador</span>
+                    {% endif %}
+                    {% if factura.entorno_emision == 'homologacion' %}
+                        <span class="badge badge-secondary" data-tooltip="Sin validez fiscal"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.75 3h4.5M10.5 3v6.29a1.5 1.5 0 01-.257.84l-4.788 7.033A1.5 1.5 0 006.7 19.5h10.6a1.5 1.5 0 001.245-2.337l-4.788-7.033a1.5 1.5 0 01-.257-.84V3"/></svg> Homologación</span>
+                    {% endif %}
+                </div>
+            </div>
+
             <div class="card-body">
-                <h1 class="page-title">{{ factura.get_tipo_comprobante_display }} N° {{ factura.numero_completo }}</h1>
-
                 {% if factura.factura_asociada %}
-                <p class="value" style="margin-top:-12px; margin-bottom:16px;">
-                    Asociada a: <a href="{% url 'detalle_factura' factura.factura_asociada.id %}">{{ factura.factura_asociada.get_tipo_comprobante_display }} N° {{ factura.factura_asociada.numero_completo }}</a>
-                </p>
-                {% endif %}
-
-                {% if mensaje %}
-                <div class="alert {% if exito %}alert-success{% else %}alert-danger{% endif %}">
-                    {{ mensaje }}
+                <div style="margin-bottom:16px; font-size:13.5px; color:var(--text-muted);">
+                    Asociada a:
+                    <a href="{% url 'detalle_factura' factura.factura_asociada.id %}" style="font-weight:600;">
+                        {{ factura.factura_asociada.get_tipo_comprobante_display }} N° {{ factura.factura_asociada.numero_completo }}
+                    </a>
                 </div>
                 {% endif %}
 
                 <div class="info-grid">
                     <div>
                         <div class="label">Cliente</div>
-                        <div class="value">{{ factura.cliente.nombre_completo }}</div>
-                    </div>
-                    <div>
-                        <div class="label">Estado</div>
-                        <div class="value">
-                            {% if factura.estado == 'AUTORIZADA' %}
-                                <span class="badge badge-success">Autorizada</span>
-                            {% elif factura.estado == 'ERROR' %}
-                                <span class="badge badge-danger">Error</span>
-                            {% else %}
-                                <span class="badge badge-secondary">Borrador</span>
-                            {% endif %}
+                        <div class="value" style="font-weight:600;"><a href="{% url 'ficha_cliente_crm' factura.cliente.id %}">{{ factura.cliente.nombre_completo }}</a></div>
+                        <div style="font-size:12.5px; color:var(--text-muted); margin-top:3px;">
+                            {{ factura.cliente.get_tipo_documento_display }}: {{ factura.cliente.numero_documento }}
                         </div>
                     </div>
                     <div>
-                        <div class="label">{{ factura.cliente.get_tipo_documento_display }}</div>
-                        <div class="value">{{ factura.cliente.numero_documento }}</div>
+                        <div class="label">Fecha de emisión</div>
+                        <div class="value">{{ factura.fecha_emision|date:"d/m/Y" }}</div>
                     </div>
+                    {% if factura.periodo_desde %}
+                    <div>
+                        <div class="label">Período facturado</div>
+                        <div class="value">{{ factura.periodo_desde|date:"d/m/Y" }} → {{ factura.periodo_hasta|date:"d/m/Y" }}</div>
+                    </div>
+                    {% endif %}
+                    {% if factura.fecha_vto_pago %}
+                    <div>
+                        <div class="label">Vencimiento de pago</div>
+                        <div class="value">{{ factura.fecha_vto_pago|date:"d/m/Y" }}</div>
+                    </div>
+                    {% endif %}
                     {% if factura.cae %}
                     <div>
                         <div class="label">CAE</div>
-                        <div class="value">{{ factura.cae }} (vence {{ factura.cae_vencimiento }})</div>
+                        <div class="value mono">{{ factura.cae }}</div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">Vence {{ factura.cae_vencimiento|date:"d/m/Y" }}</div>
                     </div>
                     {% endif %}
-                    <div>
-                        <div class="label">Fecha</div>
-                        <div class="value">{{ factura.fecha_emision }}</div>
-                    </div>
                 </div>
 
-                <table>
+                <!-- Tabla de ítems -->
+                <div class="table-scroll">
+                <table style="margin:0;">
                     <thead>
                         <tr>
-                            <th>Servicio</th>
-                            <th>Cantidad</th>
-                            <th>Precio Unit.</th>
-                            <th>Subtotal</th>
-                            <th>IVA</th>
-                            <th>Total</th>
+                            <th>Descripción</th>
+                            <th style="text-align:right;">Cant.</th>
+                            <th style="text-align:right;">Precio unit.</th>
+                            <th style="text-align:right;">Subtotal</th>
+                            <th style="text-align:right;">IVA</th>
+                            <th style="text-align:right;">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in factura.items.all %}
                         <tr>
-                            <td>{{ item.servicio.nombre }}</td>
-                            <td>{{ item.cantidad }}</td>
-                            <td>${{ item.precio_unitario|floatformat:2 }}</td>
-                            <td>${{ item.subtotal|floatformat:2 }}</td>
-                            <td>${{ item.iva_monto|floatformat:2 }}</td>
-                            <td>${{ item.total|floatformat:2 }}</td>
+                            <td style="font-weight:500;">{{ item.nombre_mostrado }}</td>
+                            <td class="mono" style="text-align:right;">{{ item.cantidad }}</td>
+                            <td class="mono" style="text-align:right;">${{ item.precio_unitario|floatformat:2 }}</td>
+                            <td class="mono" style="text-align:right;">${{ item.subtotal|floatformat:2 }}</td>
+                            <td class="mono" style="text-align:right; color:var(--text-muted);">${{ item.iva_monto|floatformat:2 }}</td>
+                            <td class="mono" style="text-align:right; font-weight:600;">${{ item.total|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
 
-                <div class="total-row">Total: ${{ factura.total|floatformat:2 }}</div>
-
-                {% if factura.estado == 'BORRADOR' or factura.estado == 'ERROR' %}
-                <div style="margin-top:24px; display:flex; gap:10px; flex-wrap:wrap;">
-                    <form method="post" action="{% url 'emitir_factura' factura.id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-success btn-lg">Emitir factura (solicitar CAE a ARCA)</button>
-                    </form>
-
-                    <form method="post" action="{% url 'eliminar_factura' factura.id %}" onsubmit="return confirm('¿Eliminar este borrador? Esta acción no se puede deshacer.');">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);">Eliminar borrador</button>
-                    </form>
-
-                    <a href="{% url 'comprobante_preview' factura.id %}" class="btn btn-outline" target="_blank">Vista previa del comprobante</a>
+                {% if factura.observaciones %}
+                <div style="margin-top:16px; padding:12px 14px; background:var(--bg-sunken); border-radius:var(--radius-sm); border-left:3px solid var(--border-strong);">
+                    <div class="label" style="margin-bottom:6px;">Notas</div>
+                    <p style="margin:0; white-space:pre-line; font-size:14px;">{{ factura.observaciones }}</p>
                 </div>
                 {% endif %}
 
-                {% if factura.cae %}
-                <div style="margin-top:24px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                    <a href="{% url 'comprobante_factura' factura.id %}" class="btn btn-outline">Ver comprobante / Imprimir</a>
+                <div class="total-row">${{ factura.total|floatformat:2 }}</div>
 
-                    {% if not factura.es_nota_credito and not factura.es_nota_debito %}
-                    <a href="{% url 'generar_nota' factura.id 'credito' %}" class="btn btn-outline">Generar Nota de Crédito</a>
-                    <a href="{% url 'generar_nota' factura.id 'debito' %}" class="btn btn-outline">Generar Nota de Débito</a>
+                <!-- Acciones -->
+                <div class="action-bar">
+                    {% if factura.estado == 'BORRADOR' or factura.estado == 'ERROR' %}
+                        {% if factura.es_nota_credito or factura.es_nota_debito %}
+                        <a href="{% url 'editar_nota' factura.id %}" class="btn btn-outline"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L7.5 19.151l-4.5 1.125 1.125-4.5L16.862 4.487z"/></svg> Editar nota</a>
+                        {% endif %}
+
+                        <form method="post" action="{% url 'emitir_factura' factura.id %}"
+                              id="form-emitir" onsubmit="return confirmarEmision(this);">
+                            {% csrf_token %}
+                            <div class="entorno-selector" style="display:flex; align-items:center; gap:16px; margin-bottom:10px;">
+                                <label style="display:flex; align-items:center; gap:6px; font-weight:500; cursor:pointer;">
+                                    <input type="radio" name="entorno" value="homologacion" checked onchange="onEntornoChange(this)"> Autorización de PRUEBA
+                                </label>
+                                <label style="display:flex; align-items:center; gap:6px; font-weight:500; cursor:pointer;">
+                                    <input type="radio" name="entorno" value="produccion" onchange="onEntornoChange(this)"> Autorización REAL (AFIP)
+                                </label>
+                            </div>
+                            <div id="confirmacion-real" style="display:none; margin-bottom:10px;">
+                                <label for="confirmacion_real" style="display:block; margin-bottom:4px; font-size:13px; color:var(--text-muted);">Escribí REAL para confirmar</label>
+                                <input type="text" id="confirmacion_real" name="confirmacion_real" placeholder="REAL" autocomplete="off" class="filter-search" style="max-width:200px;">
+                            </div>
+                            <button type="submit" class="btn btn-success btn-lg">
+                                Emitir y obtener CAE →
+                            </button>
+                        </form>
+
+                        <a href="{% url 'comprobante_preview' factura.id %}" class="btn btn-outline" target="_blank">
+                            Vista previa PDF
+                        </a>
+
+                        <form method="post" action="{% url 'eliminar_factura' factura.id %}"
+                              onsubmit="return confirm('¿Eliminar este borrador? Esta acción no se puede deshacer.');"
+                              style="margin-left:auto;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                        </form>
+                    {% endif %}
+
+                    {% if factura.cae %}
+                        <a href="{% url 'comprobante_factura' factura.id %}" class="btn btn-primary" target="_blank">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12h6m-6 4h4M7 21h10a2 2 0 002-2V7.914a2 2 0 00-.586-1.414l-3.914-3.914A2 2 0 0013.086 2H7a2 2 0 00-2 2v15a2 2 0 002 2z"/></svg> Ver comprobante PDF
+                        </a>
+                        <a href="{% url 'preparar_envio' %}?ids={{ factura.id }}" class="btn btn-outline">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Enviar por email
+                        </a>
+
+                        {% if not factura.es_nota_credito and not factura.es_nota_debito %}
+                        <form method="post" action="{% url 'generar_nota' factura.id 'credito' %}"
+                              onsubmit="return marcarCargando(this);">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline btn-sm" data-tooltip="Anula total o parcialmente esta factura">
+                                Nota de Crédito
+                            </button>
+                        </form>
+                        <form method="post" action="{% url 'generar_nota' factura.id 'debito' %}"
+                              onsubmit="return marcarCargando(this);">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline btn-sm">Nota de Débito</button>
+                        </form>
+                        {% endif %}
+
+                        {% if factura.entorno_emision == 'homologacion' %}
+                        <form method="post" action="{% url 'eliminar_factura' factura.id %}"
+                              onsubmit="return confirm('Esta factura es de HOMOLOGACIÓN (sin validez fiscal). ¿Eliminarla?');"
+                              style="margin-left:auto;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.75 3h4.5M10.5 3v6.29a1.5 1.5 0 01-.257.84l-4.788 7.033A1.5 1.5 0 006.7 19.5h10.6a1.5 1.5 0 001.245-2.337l-4.788-7.033a1.5 1.5 0 01-.257-.84V3"/></svg> Eliminar (homologación)</button>
+                        </form>
+                        {% endif %}
                     {% endif %}
                 </div>
-                {% if not factura.es_nota_credito and not factura.es_nota_debito %}
-                <p style="margin-top:12px; color: var(--text-muted); font-size:13px;">
-                    Una factura autorizada no se puede eliminar ni modificar. Para anular su efecto, generá una Nota de Crédito por el mismo importe.
+
+                {% if factura.cae and factura.entorno_emision != 'homologacion' and not factura.es_nota_credito and not factura.es_nota_debito %}
+                <p style="margin-top:10px; font-size:12.5px; color:var(--text-faint);">
+                    Una factura autorizada no puede modificarse. Para anularla, generá una Nota de Crédito.
                 </p>
-                {% endif %}
                 {% endif %}
             </div>
         </div>
+
+        {% if factura.estado == 'AUTORIZADA' %}
+        <!-- Cobro y retenciones: seguimiento interno, no aparece en el PDF de ARCA -->
+        <div class="card" id="cobro" style="margin-top:20px; scroll-margin-top:16px;">
+            <div class="card-header">
+                <h2 style="font-size:14px; margin:0;">Cobro y retenciones</h2>
+                {% if factura.pagada %}
+                    <span class="badge badge-success">Pagada</span>
+                {% elif factura.esta_vencida %}
+                    <span class="badge badge-danger">Vencida</span>
+                {% else %}
+                    <span class="badge badge-secondary">Pendiente</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <p style="margin:0 0 16px; font-size:12.5px; color:var(--text-faint);">
+                    Datos internos para tu control de cobranza. No forman parte del comprobante fiscal.
+                </p>
+                <form method="post" action="{% url 'actualizar_cobro' factura.id %}">
+                    {% csrf_token %}
+                    <div class="field" style="margin-bottom:14px;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+                            <input type="checkbox" id="pagada" name="pagada" style="margin:0;"
+                                   {% if factura.pagada %}checked{% endif %}
+                                   onchange="document.getElementById('bloque-fecha-pago').style.display = this.checked ? 'block' : 'none';">
+                            Marcar como pagada
+                        </label>
+                    </div>
+                    <div id="bloque-fecha-pago" class="field" style="{% if not factura.pagada %}display:none;{% endif %}">
+                        <label for="fecha_pago">Fecha de pago</label>
+                        <input type="date" id="fecha_pago" name="fecha_pago" value="{{ factura.fecha_pago|date:'Y-m-d' }}" style="max-width:220px;">
+                    </div>
+
+                    <div class="info-grid" style="margin-top:6px;">
+                        <div class="field">
+                            <label for="retencion_iva">Retención IVA ($)</label>
+                            <input type="number" step="0.01" min="0" id="retencion_iva" name="retencion_iva"
+                                   value="{{ factura.retencion_iva|unlocalize }}" style="max-width:220px;">
+                        </div>
+                        <div class="field">
+                            <label for="retencion_ganancias">Retención Ganancias ($)</label>
+                            <input type="number" step="0.01" min="0" id="retencion_ganancias" name="retencion_ganancias"
+                                   value="{{ factura.retencion_ganancias|unlocalize }}" style="max-width:220px;">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        {% if factura.fecha_vto_pago %}
+                        <span style="font-size:12.5px; color:{% if factura.esta_vencida %}var(--danger){% else %}var(--text-faint){% endif %};">
+                            Vence el {{ factura.fecha_vto_pago|date:"d/m/Y" }}{% if factura.esta_vencida %} — vencida{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
     </div>
+    <script>
+        function onEntornoChange(radio) {
+            document.getElementById('confirmacion-real').style.display = radio.value === 'produccion' ? 'block' : 'none';
+        }
+        function confirmarEmision(form) {
+            const entorno = form.querySelector('input[name=entorno]:checked').value;
+            if (entorno === 'produccion') {
+                const confirmacion = form.querySelector('#confirmacion_real').value.trim().toUpperCase();
+                if (confirmacion !== 'REAL') {
+                    alert('Para autorizar contra AFIP REAL, escribí "REAL" en el campo de confirmación.');
+                    return false;
+                }
+            }
+            const boton = form.querySelector('button[type=submit]');
+            boton.classList.add('loading');
+            boton.disabled = true;
+            return true;
+        }
+    </script>
 </body>
 </html>

@@ -1,0 +1,107 @@
+{% load static l10n %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Editar nota #{{ factura.id }}</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container">
+        <a href="{% url 'detalle_factura' factura.id %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">&larr; Volver al comprobante</a>
+
+        <div class="card">
+            <div class="card-body">
+                <p class="page-eyebrow">{{ factura.get_tipo_comprobante_display }}</p>
+                <h1 class="page-title" style="margin-bottom:20px;">Editar nota N° {{ factura.numero_completo }}</h1>
+
+                <p class="value" style="margin-top:-12px; margin-bottom:20px;">
+                    Asociada a: <a href="{% url 'detalle_factura' factura.factura_asociada.id %}">{{ factura.factura_asociada.get_tipo_comprobante_display }} N° {{ factura.factura_asociada.numero_completo }}</a>
+                </p>
+
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+
+                <form method="post" id="form-editar-nota" onsubmit="return marcarCargando(this)">
+                    {% csrf_token %}
+
+                    <p class="section-label" style="margin-top:24px;">Ítems de la nota</p>
+                    <p class="field-hint">El nombre del producto se puede personalizar solo para esta nota, sin modificar el catálogo.</p>
+                    <table id="tabla-items">
+                        <thead>
+                            <tr>
+                                <th scope="col">Nombre del producto</th>
+                                <th scope="col" style="width:110px;">Cantidad</th>
+                                <th scope="col" style="width:140px;">Precio Unit.</th>
+                                <th scope="col" style="width:110px;">Alícuota IVA</th>
+                                <th scope="col" style="width:70px;">Quitar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in factura.items.all %}
+                            <tr>
+                                <td>
+                                    <input type="text" name="descripcion_{{ item.id }}" value="{{ item.descripcion_personalizada|default:'' }}" placeholder="{{ item.servicio.nombre|default:'Nombre del producto' }}">
+                                </td>
+                                <td><input type="number" step="0.01" min="0.01" name="cantidad_{{ item.id }}" value="{{ item.cantidad|unlocalize }}" required></td>
+                                <td><input type="number" step="0.01" min="0" name="precio_unitario_{{ item.id }}" value="{{ item.precio_unitario|unlocalize }}" required></td>
+                                <td>
+                                    <select name="alicuota_iva_{{ item.id }}">
+                                        {% for valor, etiqueta in alicuotas_iva %}
+                                        <option value="{{ valor }}" {% if item.alicuota_iva == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td style="text-align:center;">
+                                    <input type="checkbox" name="eliminar_{{ item.id }}" title="Quitar este ítem de la nota" aria-label="Quitar este ítem de la nota">
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-agregar-producto" style="margin-top:12px;">+ Agregar producto</button>
+                    <p class="field-hint">Para devolver solo una parte, editá la cantidad del ítem correspondiente en vez de eliminarlo.</p>
+
+                    <div style="margin-top:24px;">
+                        <button type="submit" class="btn btn-primary btn-lg">Guardar cambios</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <template id="template-fila-nueva">
+        <tr>
+            <td>
+                <select name="nuevo_servicio[]" class="select-nuevo-servicio">
+                    <option value="">— Elegir producto/servicio —</option>
+                    {% for servicio in servicios %}
+                    <option value="{{ servicio.id }}">{{ servicio.nombre }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="nueva_descripcion[]" placeholder="Nombre personalizado (opcional)" style="margin-top:4px;">
+            </td>
+            <td><input type="number" step="0.01" min="0.01" name="nueva_cantidad[]" value="1"></td>
+            <td><input type="number" step="0.01" min="0" name="nuevo_precio[]" value="0"></td>
+            <td>
+                <select name="nueva_alicuota[]">
+                    {% for valor, etiqueta in alicuotas_iva %}
+                    <option value="{{ valor }}">{{ etiqueta }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td style="text-align:center;">
+                <button type="button" class="btn btn-ghost btn-sm btn-quitar-fila-nueva" aria-label="Quitar ítem"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            </td>
+        </tr>
+    </template>
+
+    <script src="{% static 'js/editar_nota.js' %}"></script>
+</body>
+</html>

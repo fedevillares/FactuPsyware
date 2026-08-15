@@ -83,6 +83,40 @@ class ListadoFacturasPaginacionTests(TestCase):
         self.assertContains(respuesta, 'page=2&q=Cliente%20de%20Prueba')
 
 
+class DetalleFacturaClienteLinkTests(TestCase):
+    """El nombre del cliente en el detalle de factura debe enlazar a su
+    ficha 360 del CRM."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester_detalle', password='clave-de-test')
+        self.client.force_login(self.user)
+        self.cliente = crear_cliente()
+        self.factura = crear_factura(self.cliente)
+
+    def test_cliente_enlaza_a_ficha_360(self):
+        respuesta = self.client.get(reverse('detalle_factura', args=[self.factura.id]))
+        self.assertContains(respuesta, f'href="/crm/clientes/{self.cliente.id}/"')
+
+
+class NavPrincipalTests(TestCase):
+    """CRM debe aparecer antes que Clientes en la nav, y tiene que haber
+    forma de cerrar sesión y llegar al admin."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('tester_nav', password='clave-de-test')
+        self.client.force_login(self.user)
+
+    def test_crm_antes_que_clientes(self):
+        respuesta = self.client.get(reverse('listado_facturas'))
+        contenido = respuesta.content.decode()
+        self.assertLess(contenido.index('>CRM<'), contenido.index('>Clientes<'))
+
+    def test_hay_link_de_cerrar_sesion_y_admin(self):
+        respuesta = self.client.get(reverse('listado_facturas'))
+        self.assertContains(respuesta, reverse('logout'))
+        self.assertContains(respuesta, reverse('admin:index'))
+
+
 class LoginRequeridoTests(TestCase):
     """Ninguna vista de facturas debe ser accesible sin iniciar sesión."""
 

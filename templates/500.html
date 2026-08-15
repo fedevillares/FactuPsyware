@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Error del servidor — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+    <style>
+        .face-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+        .face {
+            width: 110px;
+            height: auto;
+            color: var(--danger);
+            opacity: 0;
+            transform: scale(0.9);
+            animation: face-in 0.5s ease-out 0.1s forwards;
+        }
+        @keyframes face-in {
+            to { opacity: 1; transform: scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .face { animation: none; opacity: 1; transform: none; }
+        }
+    </style>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container">
+        <div class="empty-state" style="margin-top: 60px;">
+            <div class="face-container">
+                <svg class="face" viewBox="0 0 320 380" aria-hidden="true">
+                    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="25">
+                        <g class="face__eyes" transform="translate(0,112.5)">
+                            <g transform="translate(15,0)">
+                                <polyline points="37,0 0,120 75,120"></polyline>
+                                <polyline points="55,120 55,155" stroke-dasharray="35 35"></polyline>
+                            </g>
+                            <g transform="translate(230,0)">
+                                <polyline points="37,0 0,120 75,120"></polyline>
+                                <polyline points="55,120 55,155" stroke-dasharray="35 35"></polyline>
+                            </g>
+                        </g>
+                        <rect x="132.5" y="112.5" width="55" height="155" rx="4" ry="4"></rect>
+                        <g transform="translate(65,334)" stroke-dasharray="180 0">
+                            <path d="M 0 15 L 190 15"></path>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+            <p style="font-size: 17px; font-weight: 600; color: var(--text);">Algo salió mal de este lado.</p>
+            <p>El error quedó registrado en <code>logs/django_errors.log</code>. Probá de nuevo en un momento.</p>
+            <a href="{% url 'listado_facturas' %}" class="btn btn-primary btn-sm">Volver a Facturas</a>
+        </div>
+    </div>
+</body>
+</html>
