@@ -3,6 +3,8 @@ from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from clientes.models import Cliente
+
 from .models import Lead, NotaLead
 
 
@@ -69,3 +71,59 @@ def actualizar_estado_lead(request, lead_id):
     lead.estado = estado
     lead.save(update_fields=['estado', 'actualizado'])
     return HttpResponse(status=204)
+
+
+def _validar_datos_cliente(datos):
+    if not datos['nombre_completo']:
+        return "El cliente necesita un nombre o razón social."
+    if datos['tipo_documento'] not in dict(Cliente.TIPO_DOCUMENTO):
+        return "Elegí un tipo de documento válido."
+    if not datos['numero_documento']:
+        return "El cliente necesita un número de documento."
+    if datos['condicion_iva'] not in dict(Cliente.CONDICION_IVA):
+        return "Elegí una condición frente al IVA válida."
+    if Cliente.objects.filter(numero_documento=datos['numero_documento']).exists():
+        return f"Ya existe un cliente con el documento {datos['numero_documento']}."
+    return None
+
+
+@login_required
+def convertir_lead(request, lead_id):
+    lead = get_object_or_404(Lead, id=lead_id)
+    if lead.cliente_id:
+        return redirect('ficha_cliente_crm', cliente_id=lead.cliente_id)
+
+    if request.method == 'POST':
+        datos = {
+            'nombre_completo': request.POST.get('nombre_completo', '').strip(),
+            'tipo_documento': request.POST.get('tipo_documento', '').strip(),
+            'numero_documento': request.POST.get('numero_documento', '').strip(),
+            'condicion_iva': request.POST.get('condicion_iva', '').strip(),
+            'telefono': request.POST.get('telefono', '').strip(),
+            'email': request.POST.get('email', '').strip(),
+            'direccion': request.POST.get('direccion', '').strip(),
+        }
+        error = _validar_datos_cliente(datos)
+        if error:
+            return render(request, 'crm/convertir_lead.html', {
+                'lead': lead, 'error': error, 'datos': datos,
+                'tipo_documento_choices': Cliente.TIPO_DOCUMENTO,
+                'condicion_iva_choices': Cliente.CONDICION_IVA,
+            })
+
+        cliente = Cliente.objects.create(**datos)
+        lead.cliente = cliente
+        lead.estado = 'GANADO'
+        lead.save(update_fields=['cliente', 'estado', 'actualizado'])
+        return redirect('ficha_cliente_crm', cliente_id=cliente.id)
+
+    datos = {
+        'nombre_completo': lead.nombre, 'tipo_documento': '96',
+        'numero_documento': '', 'condicion_iva': 'CF',
+        'telefono': lead.telefono, 'email': lead.email, 'direccion': '',
+    }
+    return render(request, 'crm/convertir_lead.html', {
+        'lead': lead, 'datos': datos,
+        'tipo_documento_choices': Cliente.TIPO_DOCUMENTO,
+        'condicion_iva_choices': Cliente.CONDICION_IVA,
+    })

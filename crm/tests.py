@@ -133,3 +133,52 @@ class ActualizarEstadoLeadViewTests(TestCase):
     def test_get_no_permitido(self):
         response = self.client.get(reverse('actualizar_estado_lead', args=[self.lead.id]))
         self.assertEqual(response.status_code, 405)
+
+
+from clientes.models import Cliente
+
+
+class ConvertirLeadViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester5', password='pass12345')
+        self.client.force_login(self.user)
+        self.lead = Lead.objects.create(nombre="Carla Díaz", telefono="1155667788")
+
+    def test_form_precarga_nombre_del_lead(self):
+        response = self.client.get(reverse('convertir_lead', args=[self.lead.id]))
+        self.assertContains(response, "Carla Díaz")
+
+    def test_convertir_lead_crea_cliente_y_marca_ganado(self):
+        response = self.client.post(reverse('convertir_lead', args=[self.lead.id]), {
+            'nombre_completo': 'Carla Díaz', 'tipo_documento': '96',
+            'numero_documento': '30111222', 'condicion_iva': 'CF',
+            'telefono': '1155667788', 'email': '', 'direccion': '',
+        })
+        self.lead.refresh_from_db()
+        self.assertTrue(self.lead.esta_ganado)
+        self.assertIsNotNone(self.lead.cliente_id)
+        cliente = Cliente.objects.get(numero_documento='30111222')
+        self.assertEqual(self.lead.cliente_id, cliente.id)
+        self.assertRedirects(response, reverse('ficha_cliente_crm', args=[cliente.id]))
+
+    def test_convertir_sin_numero_documento_muestra_error(self):
+        response = self.client.post(reverse('convertir_lead', args=[self.lead.id]), {
+            'nombre_completo': 'Carla Díaz', 'tipo_documento': '96',
+            'numero_documento': '', 'condicion_iva': 'CF',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "número de documento")
+        self.lead.refresh_from_db()
+        self.assertFalse(self.lead.esta_ganado)
+
+    def test_lead_ya_convertido_redirige_directo_a_la_ficha(self):
+        cliente = Cliente.objects.create(
+            nombre_completo='Carla Díaz', tipo_documento='96',
+            numero_documento='30111222', condicion_iva='CF',
+        )
+        self.lead.cliente = cliente
+        self.lead.estado = 'GANADO'
+        self.lead.save(update_fields=['cliente', 'estado', 'actualizado'])
+
+        response = self.client.get(reverse('convertir_lead', args=[self.lead.id]))
+        self.assertRedirects(response, reverse('ficha_cliente_crm', args=[cliente.id]))

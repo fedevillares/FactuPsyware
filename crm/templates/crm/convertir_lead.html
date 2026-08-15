@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Convertir lead — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:560px;">
+        <a href="{% url 'detalle_lead' lead.id %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver al lead</a>
+
+        <div class="card">
+            <div class="card-header"><h2>Convertir "{{ lead.nombre }}" en Cliente</h2></div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                <form method="post" onsubmit="return marcarCargando(this);">
+                    {% csrf_token %}
+                    <div class="field">
+                        <label for="nombre_completo">Nombre / Razón social</label>
+                        <input type="text" id="nombre_completo" name="nombre_completo" value="{{ datos.nombre_completo }}" required>
+                    </div>
+                    <div class="field">
+                        <label for="tipo_documento">Tipo de documento</label>
+                        <select id="tipo_documento" name="tipo_documento">
+                            {% for clave, etiqueta in tipo_documento_choices %}
+                            <option value="{{ clave }}" {% if datos.tipo_documento == clave %}selected{% endif %}>{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="numero_documento">Número de documento</label>
+                        <input type="text" id="numero_documento" name="numero_documento" value="{{ datos.numero_documento }}" required>
+                    </div>
+                    <div class="field">
+                        <label for="condicion_iva">Condición frente al IVA</label>
+                        <select id="condicion_iva" name="condicion_iva">
+                            {% for clave, etiqueta in condicion_iva_choices %}
+                            <option value="{{ clave }}" {% if datos.condicion_iva == clave %}selected{% endif %}>{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="telefono">Teléfono</label>
+                        <input type="text" id="telefono" name="telefono" value="{{ datos.telefono }}">
+                    </div>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ datos.email }}">
+                    </div>
+                    <div class="field">
+                        <label for="direccion">Dirección</label>
+                        <input type="text" id="direccion" name="direccion" value="{{ datos.direccion }}">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-block">Crear cliente y marcar como Ganado →</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
