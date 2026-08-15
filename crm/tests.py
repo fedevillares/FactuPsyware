@@ -182,3 +182,57 @@ class ConvertirLeadViewTests(TestCase):
 
         response = self.client.get(reverse('convertir_lead', args=[self.lead.id]))
         self.assertRedirects(response, reverse('ficha_cliente_crm', args=[cliente.id]))
+
+
+from datetime import date
+from facturas.models import Factura, FacturaItem
+from servicios.models import Servicio
+from tickets.models import Ticket
+
+
+class FichaClienteViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester6', password='pass12345')
+        self.client.force_login(self.user)
+        self.cliente = Cliente.objects.create(
+            nombre_completo='Empresa Test', tipo_documento='80',
+            numero_documento='20111222339', condicion_iva='RI',
+        )
+
+    def test_muestra_datos_del_cliente(self):
+        response = self.client.get(reverse('ficha_cliente_crm', args=[self.cliente.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Empresa Test')
+
+    def test_timeline_incluye_factura_y_ticket(self):
+        servicio = Servicio.objects.create(nombre='Consulta', precio_unitario=1000)
+        factura = Factura.objects.create(cliente=self.cliente, tipo_comprobante='6')
+        FacturaItem.objects.create(
+            factura=factura, servicio=servicio, cantidad=1,
+            precio_unitario=1000, alicuota_iva='5',
+        )
+        ticket = Ticket.objects.create(
+            cliente=self.cliente, titulo='No anda el login', descripcion='Detalle del problema.',
+        )
+
+        response = self.client.get(reverse('ficha_cliente_crm', args=[self.cliente.id]))
+        self.assertContains(response, factura.letra_comprobante)
+        self.assertContains(response, ticket.titulo)
+
+    def test_muestra_notas_del_lead_ganado(self):
+        lead = Lead.objects.create(nombre='Empresa Test', estado='GANADO', cliente=self.cliente)
+        NotaLead.objects.create(lead=lead, texto='Cliente muy puntual con los pagos.')
+
+        response = self.client.get(reverse('ficha_cliente_crm', args=[self.cliente.id]))
+        self.assertContains(response, 'Cliente muy puntual con los pagos.')
+
+    def test_convertir_lead_redirige_ahora_correctamente(self):
+        """Cierra el forward-reference de Task 5: la conversión ahora redirige a una URL real."""
+        lead = Lead.objects.create(nombre='Otra Empresa')
+        response = self.client.post(reverse('convertir_lead', args=[lead.id]), {
+            'nombre_completo': 'Otra Empresa', 'tipo_documento': '96',
+            'numero_documento': '30999888', 'condicion_iva': 'CF',
+            'telefono': '', 'email': '', 'direccion': '',
+        })
+        cliente = Cliente.objects.get(numero_documento='30999888')
+        self.assertRedirects(response, reverse('ficha_cliente_crm', args=[cliente.id]))

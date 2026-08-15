@@ -4,6 +4,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from clientes.models import Cliente
+from facturas.models import Factura
+from tickets.models import Ticket
 
 from .models import Lead, NotaLead
 
@@ -126,4 +128,21 @@ def convertir_lead(request, lead_id):
         'lead': lead, 'datos': datos,
         'tipo_documento_choices': Cliente.TIPO_DOCUMENTO,
         'condicion_iva_choices': Cliente.CONDICION_IVA,
+    })
+
+
+@login_required
+def ficha_cliente(request, cliente_id):
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    facturas = Factura.objects.filter(cliente=cliente).order_by('-fecha_emision')
+    tickets = Ticket.objects.filter(cliente=cliente).order_by('-fecha_inicio')
+
+    eventos = [{'fecha': f.fecha_emision, 'tipo': 'factura', 'obj': f} for f in facturas]
+    eventos += [{'fecha': t.fecha_inicio.date(), 'tipo': 'ticket', 'obj': t} for t in tickets]
+    eventos.sort(key=lambda e: e['fecha'], reverse=True)
+
+    lead = Lead.objects.filter(cliente=cliente).prefetch_related('notas').first()
+
+    return render(request, 'crm/ficha_cliente.html', {
+        'cliente': cliente, 'eventos': eventos, 'lead': lead,
     })
