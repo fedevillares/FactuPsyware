@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nuevo lead — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:560px;">
+        <a href="{% url 'kanban_leads' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver al pipeline</a>
+
+        <div class="card">
+            <div class="card-header"><h2>Nuevo lead</h2></div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+                {% endif %}
+                <form method="post" onsubmit="return marcarCargando(this);">
+                    {% csrf_token %}
+                    <div class="field">
+                        <label for="nombre">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" value="{{ nombre|default:'' }}" required>
+                    </div>
+                    <div class="field">
+                        <label for="telefono">Teléfono</label>
+                        <input type="text" id="telefono" name="telefono" value="{{ telefono|default:'' }}">
+                    </div>
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" value="{{ email|default:'' }}">
+                    </div>
+                    <div class="field">
+                        <label for="origen">Origen</label>
+                        <select id="origen" name="origen">
+                            {% for clave, etiqueta in origen_choices %}
+                            <option value="{{ clave }}" {% if origen == clave %}selected{% endif %}>{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="proximo_contacto">Próximo contacto</label>
+                        <input type="date" id="proximo_contacto" name="proximo_contacto" value="{{ proximo_contacto|default:'' }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Crear lead</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

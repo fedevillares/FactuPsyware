@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ lead.nombre }} — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:760px;">
+        <a href="{% url 'kanban_leads' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver al pipeline</a>
+
+        <div class="card">
+            <div class="card-header" style="background:var(--bg-sunken);">
+                <div>
+                    <p class="page-eyebrow" style="margin:0 0 4px;">Lead — {{ lead.get_estado_display }}</p>
+                    <span style="font-size:18px; font-weight:700;">{{ lead.nombre }}</span>
+                </div>
+                {% if lead.esta_ganado %}
+                <span class="badge badge-success">Ganado</span>
+                {% elif lead.estado == 'PERDIDO' %}
+                <span class="badge badge-danger">Perdido</span>
+                {% else %}
+                <span class="badge badge-secondary">{{ lead.get_estado_display }}</span>
+                {% endif %}
+            </div>
+
+            <div class="card-body">
+                <div class="info-grid">
+                    <div>
+                        <div class="label">Teléfono</div>
+                        <div class="value">{{ lead.telefono|default:"—" }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Email</div>
+                        <div class="value">{{ lead.email|default:"—" }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Origen</div>
+                        <div class="value">{{ lead.get_origen_display }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Próximo contacto</div>
+                        <div class="value">{{ lead.proximo_contacto|date:"d/m/Y"|default:"—" }}</div>
+                    </div>
+                </div>
+
+                {% if lead.esta_ganado %}
+                <div class="action-bar">
+                    <a href="{% url 'ficha_cliente_crm' lead.cliente_id %}" class="btn btn-primary">Ver ficha de cliente →</a>
+                </div>
+                {% else %}
+                <div class="action-bar">
+                    <a href="{% url 'convertir_lead' lead.id %}" class="btn btn-success">Convertir en Cliente →</a>
+                </div>
+                {% endif %}
+
+                <div style="margin-top:22px; padding-top:18px; border-top:1px solid var(--border);">
+                    <div class="label" style="margin-bottom:8px;">Agregar nota</div>
+                    <form method="post" action="{% url 'agregar_nota_lead' lead.id %}" onsubmit="return marcarCargando(this);">
+                        {% csrf_token %}
+                        <div class="field">
+                            <textarea name="texto" rows="3" placeholder="Ej: Llamó preguntando precios, dijo que decide en marzo."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-outline">Guardar nota</button>
+                    </form>
+                </div>
+
+                {% if lead.notas.all %}
+                <div style="margin-top:22px;">
+                    <div class="label" style="margin-bottom:8px;">Bitácora</div>
+                    <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;">
+                        {% for nota in lead.notas.all %}
+                        <li style="padding:10px 12px; background:var(--bg-sunken); border-radius:var(--radius-sm); border-left:3px solid var(--border-strong);">
+                            <div class="faint" style="font-size:12px;">{{ nota.fecha|date:"d/m/Y H:i" }}</div>
+                            <p style="margin:4px 0 0; white-space:pre-line; font-size:13px;">{{ nota.texto }}</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
