@@ -33,6 +33,7 @@
                             <option value="{{ clave }}" {% if datos.tipo_documento == clave %}selected{% endif %}>{{ etiqueta }}</option>
                             {% endfor %}
                         </select>
+                        <p class="faint" style="font-size:12px; margin:4px 0 0;">DNI para consumidor final, CUIT para empresas/monotributistas.</p>
                     </div>
                     <div class="field">
                         <label for="numero_documento">Número de documento</label>
@@ -45,6 +46,7 @@
                             <option value="{{ clave }}" {% if datos.condicion_iva == clave %}selected{% endif %}>{{ etiqueta }}</option>
                             {% endfor %}
                         </select>
+                        <p class="faint" style="font-size:12px; margin:4px 0 0;">Si no sabés cuál es, "Consumidor Final" es la opción más común para pacientes particulares.</p>
                     </div>
                     <div class="field">
                         <label for="telefono">Teléfono</label>

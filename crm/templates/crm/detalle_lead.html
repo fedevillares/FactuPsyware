@@ -27,7 +27,16 @@
                     {% elif lead.estado == 'PERDIDO' %}
                     <span class="badge badge-danger">Perdido</span>
                     {% else %}
-                    <span class="badge badge-secondary">{{ lead.get_estado_display }}</span>
+                    <form method="post" action="{% url 'actualizar_estado_lead' lead.id %}">
+                        {% csrf_token %}
+                        <label for="estado-select" class="faint" style="font-size:12px; margin-right:4px;">Estado:</label>
+                        <select id="estado-select" name="estado" onchange="this.form.submit()" class="filter-select" aria-label="Cambiar estado del lead">
+                            <option value="NUEVO" {% if lead.estado == 'NUEVO' %}selected{% endif %}>Nuevo</option>
+                            <option value="CONTACTADO" {% if lead.estado == 'CONTACTADO' %}selected{% endif %}>Contactado</option>
+                            <option value="NEGOCIACION" {% if lead.estado == 'NEGOCIACION' %}selected{% endif %}>En negociación</option>
+                            <option value="PERDIDO" {% if lead.estado == 'PERDIDO' %}selected{% endif %}>Perdido</option>
+                        </select>
+                    </form>
                     {% endif %}
                 </div>
             </div>

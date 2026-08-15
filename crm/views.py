@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.db import models
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,11 +15,17 @@ from .recordatorios import enviar_recordatorios_vencidos
 
 @login_required
 def kanban_leads(request):
+    q = request.GET.get('q', '').strip()
+    base = Lead.objects.select_related('cliente')
+    if q:
+        base = base.filter(
+            models.Q(nombre__icontains=q) | models.Q(telefono__icontains=q) | models.Q(email__icontains=q)
+        )
     columnas = [
-        (clave, etiqueta, Lead.objects.filter(estado=clave).select_related('cliente'))
+        (clave, etiqueta, base.filter(estado=clave).order_by('proximo_contacto', '-actualizado'))
         for clave, etiqueta in Lead.ESTADOS
     ]
-    return render(request, 'crm/kanban.html', {'columnas': columnas})
+    return render(request, 'crm/kanban.html', {'columnas': columnas, 'q': q, 'hoy': timezone.localdate()})
 
 
 @login_required

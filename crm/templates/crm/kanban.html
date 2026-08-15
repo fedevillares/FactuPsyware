@@ -22,24 +22,41 @@
 
         {% include "crm/_subnav.html" %}
 
+        <form method="get" class="filter-bar">
+            <div class="input-icon" style="flex:1; min-width:240px;">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.75"/><path d="M20.25 20.25l-4.85-4.85"/></svg>
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, teléfono o email…"
+                       autocomplete="off" aria-label="Buscar lead">
+            </div>
+            <button type="submit" class="btn btn-outline btn-sm">Filtrar</button>
+            {% if q %}
+            <a href="{% url 'kanban_leads' %}" class="btn btn-ghost btn-sm">Limpiar</a>
+            {% endif %}
+        </form>
+
         <div class="kanban-board">
             {% for clave, etiqueta, leads in columnas %}
-            <div class="kanban-column" data-estado="{{ clave }}">
+            <div class="kanban-column kanban-column-{{ clave|lower }}" data-estado="{{ clave }}">
                 <div class="kanban-column-head">
                     <span>{{ etiqueta }}</span>
                     <span class="badge badge-secondary">{{ leads|length }}</span>
                 </div>
-                <div class="kanban-column-body" ondragover="permitirDrop(event)" ondrop="soltarLead(event)">
+                <div class="kanban-column-body" ondragover="permitirDrop(event)" ondrop="soltarLead(event)" ondragleave="event.currentTarget.classList.remove('is-drop-target')">
                     {% for lead in leads %}
-                    <a class="kanban-card" href="{% url 'detalle_lead' lead.id %}"
+                    <a class="kanban-card {% if lead.proximo_contacto and lead.proximo_contacto < hoy %}kanban-card-vencida{% endif %}"
+                       href="{% url 'detalle_lead' lead.id %}"
                        draggable="{% if clave != 'GANADO' %}true{% else %}false{% endif %}"
-                       ondragstart="arrastrarLead(event)" data-lead-id="{{ lead.id }}">
+                       ondragstart="arrastrarLead(event)" ondragend="event.currentTarget.classList.remove('dragging')"
+                       data-lead-id="{{ lead.id }}">
                         <div class="kanban-card-title">{{ lead.nombre }}</div>
                         {% if lead.telefono or lead.email %}
                         <div class="kanban-card-meta">{{ lead.telefono|default:lead.email }}</div>
                         {% endif %}
                         {% if lead.proximo_contacto %}
-                        <div class="kanban-card-meta">📅 {{ lead.proximo_contacto|date:"d/m/Y" }}</div>
+                        <div class="kanban-card-meta">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:12px; height:12px; vertical-align:-1px;"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M3.75 9.75h16.5M8.25 3v3M15.75 3v3"/></svg>
+                            {{ lead.proximo_contacto|date:"d/m/Y" }}
+                        </div>
                         {% endif %}
                     </a>
                     {% empty %}
@@ -54,10 +71,12 @@
     <script>
         function arrastrarLead(event) {
             event.dataTransfer.setData('text/plain', event.currentTarget.dataset.leadId);
+            event.currentTarget.classList.add('dragging');
         }
 
         function permitirDrop(event) {
             event.preventDefault();
+            event.currentTarget.classList.add('is-drop-target');
         }
 
         function getCookie(nombre) {
@@ -67,10 +86,14 @@
 
         function soltarLead(event) {
             event.preventDefault();
+            event.currentTarget.classList.remove('is-drop-target');
             const leadId = event.dataTransfer.getData('text/plain');
             const columna = event.currentTarget.closest('.kanban-column');
             const estado = columna.dataset.estado;
-            if (estado === 'GANADO') { return; }
+            if (estado === 'GANADO') {
+                alert('Para pasar un lead a "Ganado" hay que convertirlo en Cliente desde su ficha.');
+                return;
+            }
 
             fetch(`/crm/leads/${leadId}/estado/`, {
                 method: 'POST',
@@ -80,7 +103,13 @@
                 },
                 body: `estado=${encodeURIComponent(estado)}`,
             }).then(response => {
-                if (response.ok) { window.location.reload(); }
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('No se pudo mover el lead. Probá de nuevo.');
+                }
+            }).catch(() => {
+                alert('No se pudo mover el lead — revisá tu conexión.');
             });
         }
     </script>

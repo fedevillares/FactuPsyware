@@ -817,3 +817,10 @@ kbd {
 .kanban-card:hover { border-color: var(--border-strong); text-decoration: none; }
 .kanban-card-title { font-weight: 600; font-size: 13.5px; }
 .kanban-card-meta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+.kanban-card.dragging { opacity: 0.5; }
+.kanban-column-body.is-drop-target { background: var(--bg-hover); outline: 2px dashed var(--border-strong); outline-offset: -4px; }
+.kanban-card-vencida { border-left: 3px solid var(--danger); }
+.kanban-column-ganado { border-top: 3px solid var(--success); }
+.kanban-column-ganado .kanban-column-body { opacity: 0.75; }
+.kanban-column-perdido { border-top: 3px solid var(--danger); }

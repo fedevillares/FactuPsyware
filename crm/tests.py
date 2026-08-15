@@ -449,6 +449,34 @@ class CrmDashboardViewTests(TestCase):
         self.assertEqual(response.request['PATH_INFO'], '/crm/pipeline/')
 
 
+class KanbanBusquedaTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester12', password='pass12345')
+        self.client.force_login(self.user)
+        Lead.objects.create(nombre="Roberto Paz", telefono="1100000000")
+        Lead.objects.create(nombre="Carla Díaz", email="carla@example.com")
+
+    def test_busqueda_por_nombre_filtra(self):
+        response = self.client.get(reverse('kanban_leads'), {'q': 'Roberto'})
+        self.assertContains(response, "Roberto Paz")
+        self.assertNotContains(response, "Carla Díaz")
+
+    def test_busqueda_por_telefono_filtra(self):
+        response = self.client.get(reverse('kanban_leads'), {'q': '1100000000'})
+        self.assertContains(response, "Roberto Paz")
+        self.assertNotContains(response, "Carla Díaz")
+
+    def test_sin_busqueda_muestra_todos(self):
+        response = self.client.get(reverse('kanban_leads'))
+        self.assertContains(response, "Roberto Paz")
+        self.assertContains(response, "Carla Díaz")
+
+    def test_select_de_estado_accesible_en_detalle(self):
+        lead = Lead.objects.create(nombre="Con select")
+        response = self.client.get(reverse('detalle_lead', args=[lead.id]))
+        self.assertContains(response, 'name="estado"')
+
+
 class FichaClienteEnriquecidaTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='tester11', password='pass12345')
