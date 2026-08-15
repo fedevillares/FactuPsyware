@@ -4,63 +4,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Facturas</title>
+    <title>Facturas — FactuPsyware</title>
     <link href="{% static 'css/theme.css' %}" rel="stylesheet">
     <script src="{% static 'js/theme.js' %}"></script>
 </head>
 <body>
-    <div class="app-header">
-        <div class="brand">
-            <img src="{% static 'img/logo.png' %}" alt="logo">
-            <span>Facturación</span>
-        </div>
-        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
-    </div>
+    {% include "_nav.html" %}
 
     <div class="app-container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-            <h1 class="page-title" style="margin:0;">Facturas</h1>
-            <a href="/admin/facturas/factura/add/" class="btn btn-primary">+ Nueva factura</a>
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Comprobantes</p>
+                <h1 class="page-title" style="margin:0;">Facturas</h1>
+            </div>
+            <a href="{% url 'nueva_factura' %}" class="btn btn-primary">+ Nueva factura</a>
         </div>
 
-        <div class="card">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tipo</th>
-                        <th>Número</th>
-                        <th>Cliente</th>
-                        <th>Total</th>
-                        <th>Estado</th>
-                        <th>CAE</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for factura in facturas %}
-                    <tr>
-                        <td>{{ factura.id }}</td>
-                        <td>{{ factura.get_tipo_comprobante_display }}</td>
-                        <td>{{ factura.numero_completo }}</td>
-                        <td>{{ factura.cliente.nombre_completo }}</td>
-                        <td>${{ factura.total|floatformat:2 }}</td>
-                        <td>
-                            {% if factura.estado == 'AUTORIZADA' %}
-                                <span class="badge badge-success">Autorizada</span>
-                            {% elif factura.estado == 'ERROR' %}
-                                <span class="badge badge-danger">Error</span>
-                            {% else %}
-                                <span class="badge badge-secondary">Borrador</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ factura.cae|default:"-" }}</td>
-                        <td><a href="{% url 'detalle_factura' factura.id %}" class="btn btn-outline btn-sm">Ver</a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="stat-strip" style="margin-bottom:20px;">
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M3.75 9.75h16.5M8.25 3v3M15.75 3v3"/></svg></div>
+                <div class="stat-value">{{ cantidad_mes }}</div>
+                <div class="stat-label">Facturas este mes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.25"/><path d="M12 7.5v4.5l3 3"/></svg></div>
+                <div class="stat-value">{{ pendientes_cobro }}</div>
+                <div class="stat-label">Pendientes de cobro</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background:var(--danger);"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4.5M12 16.5h.008M10.29 3.86L1.82 18a1.5 1.5 0 001.29 2.25h17.78a1.5 1.5 0 001.29-2.25L13.71 3.86a1.5 1.5 0 00-2.42 0z"/></svg></div>
+                <div class="stat-value" style="{% if vencidas %}color:var(--danger);{% endif %}">{{ vencidas }}</div>
+                <div class="stat-label">Vencidas</div>
+            </div>
         </div>
+
+        <form method="get" class="filter-bar">
+            <div class="input-icon" style="flex:1; min-width:240px;">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.75"/><path d="M20.25 20.25l-4.85-4.85"/></svg>
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar por cliente, número o CAE…"
+                       autocomplete="off" aria-label="Buscar factura por cliente, número o CAE">
+            </div>
+            <select name="estado" class="filter-select" onchange="this.form.submit()" aria-label="Filtrar por estado">
+                <option value="">Todos los estados</option>
+                <option value="BORRADOR" {% if estado == 'BORRADOR' %}selected{% endif %}>Borrador</option>
+                <option value="AUTORIZADA" {% if estado == 'AUTORIZADA' %}selected{% endif %}>Autorizada</option>
+                <option value="ERROR" {% if estado == 'ERROR' %}selected{% endif %}>Error ARCA</option>
+            </select>
+            <button type="submit" class="btn btn-outline btn-sm">Filtrar</button>
+            {% if q or estado %}
+            <a href="{% url 'listado_facturas' %}" class="btn btn-ghost btn-sm"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> Limpiar</a>
+            {% endif %}
+        </form>
+
+        {% if facturas_produccion or facturas_homologacion %}
+
+        <h2 class="section-label" style="margin-top:22px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M4.5 21V9.75M19.5 21V9.75M2.25 9.75L12 3l9.75 6.75M8.25 21v-6.75M12 21v-6.75M15.75 21v-6.75"/></svg> Producción</h2>
+        {% include "facturas/_tabla_facturas.html" with facturas=facturas_produccion seccion="produccion" mostrar_boton_eliminar_homologacion=False %}
+
+        {% if pagina_produccion.paginator.num_pages > 1 %}
+        <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:14px;">
+            {% if pagina_produccion.has_previous %}
+            <a href="?page={{ pagina_produccion.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if estado %}&estado={{ estado|urlencode }}{% endif %}" class="btn btn-outline btn-sm">&larr; Anterior</a>
+            {% endif %}
+            <span class="faint" style="font-size:13px;">Página {{ pagina_produccion.number }} de {{ pagina_produccion.paginator.num_pages }} ({{ pagina_produccion.paginator.count }} facturas)</span>
+            {% if pagina_produccion.has_next %}
+            <a href="?page={{ pagina_produccion.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if estado %}&estado={{ estado|urlencode }}{% endif %}" class="btn btn-outline btn-sm">Siguiente &rarr;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <h2 class="section-label" style="margin-top:28px; display:flex; align-items:center; gap:8px;">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.75 3h4.5M10.5 3v6.29a1.5 1.5 0 01-.257.84l-4.788 7.033A1.5 1.5 0 006.7 19.5h10.6a1.5 1.5 0 001.245-2.337l-4.788-7.033a1.5 1.5 0 01-.257-.84V3"/></svg> Homologación
+            <span class="badge badge-secondary" data-tooltip="Sin validez fiscal — se pueden eliminar">Pruebas, sin validez fiscal</span>
+        </h2>
+        {% include "facturas/_tabla_facturas.html" with facturas=facturas_homologacion seccion="homologacion" mostrar_boton_eliminar_homologacion=hay_homologacion %}
+
+        {% else %}
+        <div class="card">
+            <div class="empty-state">
+                {% if q or estado %}
+                <div class="empty-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.75"/><path d="M20.25 20.25l-4.85-4.85"/></svg></div>
+                <p>No hay facturas que coincidan con el filtro.</p>
+                <a href="{% url 'listado_facturas' %}" class="btn btn-outline btn-sm">Limpiar filtro</a>
+                {% else %}
+                <div class="empty-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12h6m-6 4h4M7 21h10a2 2 0 002-2V7.914a2 2 0 00-.586-1.414l-3.914-3.914A2 2 0 0013.086 2H7a2 2 0 00-2 2v15a2 2 0 002 2z"/></svg></div>
+                <p>Todavía no hay facturas cargadas.</p>
+                <a href="{% url 'nueva_factura' %}" class="btn btn-primary btn-sm">Crear la primera factura</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
+
+    <div id="aviso-cambios" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:1000;">
+        <button type="button" class="btn btn-primary btn-sm" style="box-shadow:0 4px 14px rgba(0,0,0,.25);" onclick="location.reload()">
+            Hay cambios nuevos — Actualizar
+        </button>
+    </div>
+
+    <script>
+    // Mantener estado del checkbox "seleccionar todo" sincronizado, por sección
+    ['produccion', 'homologacion'].forEach(seccion => {
+        const all = document.querySelectorAll('.factura-check-' + seccion);
+        const sel = document.querySelector('.select-all-' + seccion);
+        if (!sel) return;
+        all.forEach(cb => {
+            cb.addEventListener('change', () => {
+                const checked = document.querySelectorAll('.factura-check-' + seccion + ':checked');
+                sel.indeterminate = checked.length > 0 && checked.length < all.length;
+                sel.checked = checked.length === all.length;
+            });
+        });
+    });
+
+    // Actualización casi en tiempo real: si otro dispositivo/pestaña cambió
+    // algo (nueva factura, CAE asignado, cobro marcado), esta pantalla lo
+    // detecta sola. Si el usuario no está en medio de algo (sin filas
+    // seleccionadas, sin estar escribiendo en el buscador) se recarga sola;
+    // si sí, se muestra un aviso para no perderle una selección en curso.
+    (function () {
+        const url = new URL(window.location.href);
+        url.pathname = "{% url 'listado_facturas_firma' %}";
+        let firmaInicial = null;
+
+        function hayInteraccionEnCurso() {
+            const seleccionados = document.querySelectorAll('.factura-check-produccion:checked, .factura-check-homologacion:checked');
+            const buscadorEnFoco = document.activeElement && document.activeElement.name === 'q';
+            return seleccionados.length > 0 || buscadorEnFoco;
+        }
+
+        function chequear() {
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    if (firmaInicial === null) {
+                        firmaInicial = data.firma;
+                        return;
+                    }
+                    if (data.firma !== firmaInicial) {
+                        if (hayInteraccionEnCurso()) {
+                            document.getElementById('aviso-cambios').style.display = 'block';
+                        } else {
+                            location.reload();
+                        }
+                    }
+                })
+                .catch(() => {});
+        }
+
+        setInterval(chequear, 8000);
+    })();
+    </script>
 </body>
 </html>

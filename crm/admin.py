@@ -19,3 +19,4 @@ class LeadAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'telefono', 'email')
     ordering = ('-actualizado',)
     autocomplete_fields = ('cliente',)
+    list_select_related = ('cliente',)

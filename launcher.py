@@ -273,7 +273,9 @@ def levantar_servidor():
         time.sleep(1)
 
     set_estado("Listo. Esta ventana se puede cerrar.")
-    time.sleep(3)
+    # Antes había un time.sleep(3) decorativo acá: la pantalla de inicio ya
+    # se redirige sola por polling (abrir_pantalla_inicio), así que no hacía
+    # falta retener el arranque 3 segundos más.
 
 
 def abrir_pantalla_inicio():
@@ -304,19 +306,21 @@ def main():
     abrir_pantalla_inicio()
     matar_procesos_colgados()
 
-    py_launcher = encontrar_python_sistema()
-    if py_launcher is None:
-        print()
-        print("=" * 60)
-        print("ERROR: No se encontro Python instalado en esta computadora.")
-        print("Instalalo desde https://www.python.org/downloads/")
-        print('(marcar la casilla "Add Python to PATH" durante la instalacion)')
-        print("y volve a ejecutar este archivo.")
-        print("=" * 60)
-        print()
-        pausar_y_salir(1)
-
     if not venv_funciona():
+        # encontrar_python_sistema() solo hace falta para reconstruir el venv:
+        # se busca acá adentro, no antes, para no pagar ese subprocess (~200-400ms)
+        # en el 99% de los arranques donde el venv ya esta bien.
+        py_launcher = encontrar_python_sistema()
+        if py_launcher is None:
+            print()
+            print("=" * 60)
+            print("ERROR: No se encontro Python instalado en esta computadora.")
+            print("Instalalo desde https://www.python.org/downloads/")
+            print('(marcar la casilla "Add Python to PATH" durante la instalacion)')
+            print("y volve a ejecutar este archivo.")
+            print("=" * 60)
+            print()
+            pausar_y_salir(1)
         recrear_venv(py_launcher)
 
     instalar_dependencias_si_hace_falta()
