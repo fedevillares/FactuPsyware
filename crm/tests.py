@@ -278,3 +278,42 @@ class EditarLeadViewTests(TestCase):
         self.assertContains(response, "necesita un nombre")
         self.lead.refresh_from_db()
         self.assertEqual(self.lead.nombre, "Roberto Paz")
+
+
+from datetime import timedelta
+from .models import Actividad
+
+
+class ActividadModelTests(TestCase):
+    def setUp(self):
+        self.lead = Lead.objects.create(nombre="Marta Ibáñez")
+
+    def test_defaults(self):
+        actividad = Actividad.objects.create(
+            lead=self.lead, titulo="Llamar para confirmar", fecha=date.today(),
+        )
+        self.assertEqual(actividad.tipo, 'NOTA')
+        self.assertFalse(actividad.hecha)
+        self.assertFalse(actividad.recordatorio_enviado)
+
+    def test_esta_vencida_true_si_no_hecha_y_fecha_pasada(self):
+        actividad = Actividad.objects.create(
+            lead=self.lead, titulo="Llamar", fecha=date.today() - timedelta(days=1),
+        )
+        self.assertTrue(actividad.esta_vencida)
+
+    def test_esta_vencida_false_si_hecha(self):
+        actividad = Actividad.objects.create(
+            lead=self.lead, titulo="Llamar", fecha=date.today() - timedelta(days=1), hecha=True,
+        )
+        self.assertFalse(actividad.esta_vencida)
+
+    def test_esta_vencida_false_si_fecha_futura(self):
+        actividad = Actividad.objects.create(
+            lead=self.lead, titulo="Llamar", fecha=date.today() + timedelta(days=1),
+        )
+        self.assertFalse(actividad.esta_vencida)
+
+    def test_relacion_inversa_desde_lead(self):
+        Actividad.objects.create(lead=self.lead, titulo="Llamar", fecha=date.today())
+        self.assertEqual(self.lead.actividades.count(), 1)
