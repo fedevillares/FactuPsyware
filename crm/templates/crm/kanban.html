@@ -1,0 +1,86 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CRM — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:1400px;">
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">CRM</p>
+                <h1 class="page-title" style="margin:0;">Pipeline de leads</h1>
+            </div>
+            <a href="{% url 'nuevo_lead' %}" class="btn btn-primary">+ Nuevo lead</a>
+        </div>
+
+        <div class="kanban-board">
+            {% for clave, etiqueta, leads in columnas %}
+            <div class="kanban-column" data-estado="{{ clave }}">
+                <div class="kanban-column-head">
+                    <span>{{ etiqueta }}</span>
+                    <span class="badge badge-secondary">{{ leads|length }}</span>
+                </div>
+                <div class="kanban-column-body" ondragover="permitirDrop(event)" ondrop="soltarLead(event)">
+                    {% for lead in leads %}
+                    <a class="kanban-card" href="{% url 'detalle_lead' lead.id %}"
+                       draggable="{% if clave != 'GANADO' %}true{% else %}false{% endif %}"
+                       ondragstart="arrastrarLead(event)" data-lead-id="{{ lead.id }}">
+                        <div class="kanban-card-title">{{ lead.nombre }}</div>
+                        {% if lead.telefono or lead.email %}
+                        <div class="kanban-card-meta">{{ lead.telefono|default:lead.email }}</div>
+                        {% endif %}
+                        {% if lead.proximo_contacto %}
+                        <div class="kanban-card-meta">📅 {{ lead.proximo_contacto|date:"d/m/Y" }}</div>
+                        {% endif %}
+                    </a>
+                    {% empty %}
+                    <p class="faint" style="font-size:12.5px; padding:8px;">Sin leads.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        function arrastrarLead(event) {
+            event.dataTransfer.setData('text/plain', event.currentTarget.dataset.leadId);
+        }
+
+        function permitirDrop(event) {
+            event.preventDefault();
+        }
+
+        function getCookie(nombre) {
+            const match = document.cookie.match('(^|;)\\s*' + nombre + '\\s*=\\s*([^;]+)');
+            return match ? decodeURIComponent(match.pop()) : '';
+        }
+
+        function soltarLead(event) {
+            event.preventDefault();
+            const leadId = event.dataTransfer.getData('text/plain');
+            const columna = event.currentTarget.closest('.kanban-column');
+            const estado = columna.dataset.estado;
+            if (estado === 'GANADO') { return; }
+
+            fetch(`/crm/leads/${leadId}/estado/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `estado=${encodeURIComponent(estado)}`,
+            }).then(response => {
+                if (response.ok) { window.location.reload(); }
+            });
+        }
+    </script>
+</body>
+</html>
