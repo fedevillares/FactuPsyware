@@ -7,7 +7,7 @@ from clientes.models import Cliente
 from facturas.models import Factura
 from tickets.models import Ticket
 
-from .models import Lead, NotaLead
+from .models import Actividad, Lead, NotaLead
 
 
 @login_required
@@ -188,3 +188,28 @@ def editar_lead(request, lead_id):
     return render(request, 'crm/editar_lead.html', {
         'lead': lead, 'datos': datos, 'origen_choices': Lead.ORIGENES,
     })
+
+
+@login_required
+@require_POST
+def agregar_actividad_lead(request, lead_id):
+    lead = get_object_or_404(Lead, id=lead_id)
+    tipo = request.POST.get('tipo', '').strip()
+    titulo = request.POST.get('titulo', '').strip()
+    fecha = request.POST.get('fecha', '').strip()
+    hecha = request.POST.get('hecha') == 'on'
+
+    if tipo not in dict(Actividad.TIPOS):
+        tipo = 'NOTA'
+    if titulo and fecha:
+        Actividad.objects.create(lead=lead, tipo=tipo, titulo=titulo, fecha=fecha, hecha=hecha)
+    return redirect('detalle_lead', lead_id=lead.id)
+
+
+@login_required
+@require_POST
+def marcar_actividad_hecha(request, actividad_id):
+    actividad = get_object_or_404(Actividad, id=actividad_id)
+    actividad.hecha = True
+    actividad.save(update_fields=['hecha'])
+    return redirect('detalle_lead', lead_id=actividad.lead_id)

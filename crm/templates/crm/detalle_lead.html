@@ -63,6 +63,35 @@
                 {% endif %}
 
                 <div style="margin-top:22px; padding-top:18px; border-top:1px solid var(--border);">
+                    <div class="label" style="margin-bottom:8px;">Agregar actividad</div>
+                    <form method="post" action="{% url 'agregar_actividad_lead' lead.id %}" onsubmit="return marcarCargando(this);">
+                        {% csrf_token %}
+                        <div style="display:grid; grid-template-columns:1fr 2fr 1fr; gap:10px;">
+                            <div class="field">
+                                <label for="tipo">Tipo</label>
+                                <select id="tipo" name="tipo">
+                                    <option value="NOTA">Nota</option>
+                                    <option value="LLAMADA">Llamada</option>
+                                    <option value="REUNION">Reunión</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="titulo">Título</label>
+                                <input type="text" id="titulo" name="titulo" placeholder="Ej: Llamar para confirmar turno" required>
+                            </div>
+                            <div class="field">
+                                <label for="fecha">Fecha</label>
+                                <input type="date" id="fecha" name="fecha" required>
+                            </div>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:13px; margin:4px 0 10px;">
+                            <input type="checkbox" name="hecha"> Ya pasó (marcar como hecha)
+                        </label>
+                        <button type="submit" class="btn btn-outline">Guardar actividad</button>
+                    </form>
+                </div>
+
+                <div style="margin-top:22px; padding-top:18px; border-top:1px solid var(--border);">
                     <div class="label" style="margin-bottom:8px;">Agregar nota</div>
                     <form method="post" action="{% url 'agregar_nota_lead' lead.id %}" onsubmit="return marcarCargando(this);">
                         {% csrf_token %}
@@ -73,10 +102,30 @@
                     </form>
                 </div>
 
-                {% if lead.notas.all %}
+                {% if lead.notas.all or lead.actividades.all %}
                 <div style="margin-top:22px;">
                     <div class="label" style="margin-bottom:8px;">Bitácora</div>
                     <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;">
+                        {% for actividad in lead.actividades.all %}
+                        <li style="padding:10px 12px; background:var(--bg-sunken); border-radius:var(--radius-sm); border-left:3px solid {% if actividad.esta_vencida %}var(--danger){% elif actividad.hecha %}var(--success){% else %}var(--border-strong){% endif %};">
+                            <div style="display:flex; justify-content:space-between; gap:10px; align-items:baseline;">
+                                <span class="badge badge-secondary">{{ actividad.get_tipo_display }}</span>
+                                <span class="faint" style="font-size:12px;">{{ actividad.fecha|date:"d/m/Y" }}</span>
+                            </div>
+                            <p style="margin:4px 0 0; font-size:13px;">{{ actividad.titulo }}</p>
+                            {% if actividad.esta_vencida %}
+                            <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+                                <span class="badge badge-danger">Vencida</span>
+                                <form method="post" action="{% url 'marcar_actividad_hecha' actividad.id %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-ghost btn-sm">Marcar hecha</button>
+                                </form>
+                            </div>
+                            {% elif actividad.hecha %}
+                            <span class="badge badge-success" style="margin-top:6px;">Hecha</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
                         {% for nota in lead.notas.all %}
                         <li style="padding:10px 12px; background:var(--bg-sunken); border-radius:var(--radius-sm); border-left:3px solid var(--border-strong);">
                             <div class="faint" style="font-size:12px;">{{ nota.fecha|date:"d/m/Y H:i" }}</div>

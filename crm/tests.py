@@ -317,3 +317,56 @@ class ActividadModelTests(TestCase):
     def test_relacion_inversa_desde_lead(self):
         Actividad.objects.create(lead=self.lead, titulo="Llamar", fecha=date.today())
         self.assertEqual(self.lead.actividades.count(), 1)
+
+
+class AgregarActividadLeadViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester8', password='pass12345')
+        self.client.force_login(self.user)
+        self.lead = Lead.objects.create(nombre="Marta Ibáñez")
+
+    def test_agregar_actividad(self):
+        response = self.client.post(reverse('agregar_actividad_lead', args=[self.lead.id]), {
+            'tipo': 'LLAMADA', 'titulo': 'Llamar para confirmar', 'fecha': '2026-09-01',
+        })
+        self.assertRedirects(response, reverse('detalle_lead', args=[self.lead.id]))
+        self.assertEqual(self.lead.actividades.count(), 1)
+        actividad = self.lead.actividades.first()
+        self.assertEqual(actividad.tipo, 'LLAMADA')
+        self.assertEqual(actividad.titulo, 'Llamar para confirmar')
+
+    def test_agregar_actividad_hecha(self):
+        self.client.post(reverse('agregar_actividad_lead', args=[self.lead.id]), {
+            'tipo': 'NOTA', 'titulo': 'Ya llamé', 'fecha': '2026-08-01', 'hecha': 'on',
+        })
+        self.assertTrue(self.lead.actividades.first().hecha)
+
+    def test_agregar_actividad_sin_titulo_no_guarda(self):
+        self.client.post(reverse('agregar_actividad_lead', args=[self.lead.id]), {
+            'tipo': 'NOTA', 'titulo': '', 'fecha': '2026-09-01',
+        })
+        self.assertEqual(self.lead.actividades.count(), 0)
+
+    def test_agregar_actividad_sin_fecha_no_guarda(self):
+        self.client.post(reverse('agregar_actividad_lead', args=[self.lead.id]), {
+            'tipo': 'NOTA', 'titulo': 'Algo', 'fecha': '',
+        })
+        self.assertEqual(self.lead.actividades.count(), 0)
+
+
+class MarcarActividadHechaViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester9', password='pass12345')
+        self.client.force_login(self.user)
+        self.lead = Lead.objects.create(nombre="Marta Ibáñez")
+        self.actividad = Actividad.objects.create(lead=self.lead, titulo="Llamar", fecha=date.today())
+
+    def test_marcar_hecha(self):
+        response = self.client.post(reverse('marcar_actividad_hecha', args=[self.actividad.id]))
+        self.assertRedirects(response, reverse('detalle_lead', args=[self.lead.id]))
+        self.actividad.refresh_from_db()
+        self.assertTrue(self.actividad.hecha)
+
+    def test_get_no_permitido(self):
+        response = self.client.get(reverse('marcar_actividad_hecha', args=[self.actividad.id]))
+        self.assertEqual(response.status_code, 405)
