@@ -130,10 +130,13 @@ class EmpresaConfigFormPasswordTests(TestCase):
         empresa = EmpresaConfig.get_config()
         empresa.email_password = cifrar('claveOriginal')
         empresa.save(update_fields=['email_password'])
+        cifrado_original = empresa.email_password
 
         form = EmpresaConfigForm(data=self._datos_minimos(email_password=''), instance=empresa)
         self.assertTrue(form.is_valid(), form.errors)
         guardado = form.save()
+
+        self.assertEqual(guardado.email_password, cifrado_original)
         self.assertEqual(guardado.email_password_plano, 'claveOriginal')
 
     def test_escribir_nueva_password_la_cifra(self):
