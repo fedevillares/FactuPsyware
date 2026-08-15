@@ -22,6 +22,24 @@
                 </div>
                 <a href="{% url 'editar_cliente' cliente.id %}" class="btn btn-outline btn-sm">Editar datos</a>
             </div>
+            <div class="stat-strip" style="margin:0 22px; padding:16px 0 0;">
+                <div class="stat-card">
+                    <div class="stat-value">${{ total_facturado|floatformat:2 }}</div>
+                    <div class="stat-label">Total facturado</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ facturas_este_anio_count }}</div>
+                    <div class="stat-label">Facturas este año</div>
+                </div>
+                <div class="stat-card {% if tickets_abiertos_count %}is-accent{% endif %}">
+                    <div class="stat-value">{{ tickets_abiertos_count }}</div>
+                    <div class="stat-label">Tickets abiertos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">{{ ultima_factura_fecha|date:"d/m/Y"|default:"—" }}</div>
+                    <div class="stat-label">Última factura</div>
+                </div>
+            </div>
             <div class="card-body">
                 <div class="info-grid">
                     <div>
@@ -67,7 +85,10 @@
                                 <span class="badge badge-secondary">Factura {{ evento.obj.letra_comprobante }}</span>
                                 <a href="{% url 'detalle_factura' evento.obj.id %}" style="margin-left:6px; font-weight:500;">{{ evento.obj.numero_completo }}</a>
                             </div>
-                            <div class="faint" style="font-size:12px;">{{ evento.fecha|date:"d/m/Y" }}</div>
+                            <div style="text-align:right;">
+                                <div class="mono" style="font-size:13px; font-weight:600;">${{ evento.obj.total|floatformat:2 }}</div>
+                                <div class="faint" style="font-size:12px;">{{ evento.fecha|date:"d/m/Y" }}</div>
+                            </div>
                             {% else %}
                             <div>
                                 <span class="badge {% if evento.obj.esta_cerrado %}badge-secondary{% else %}badge-success{% endif %}">Ticket</span>

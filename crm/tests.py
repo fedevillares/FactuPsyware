@@ -447,3 +447,33 @@ class CrmDashboardViewTests(TestCase):
         response = self.client.get(reverse('kanban_leads'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.request['PATH_INFO'], '/crm/pipeline/')
+
+
+class FichaClienteEnriquecidaTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester11', password='pass12345')
+        self.client.force_login(self.user)
+        self.cliente = Cliente.objects.create(
+            nombre_completo='Empresa Rica', tipo_documento='80',
+            numero_documento='20444555666', condicion_iva='RI',
+        )
+        self.servicio = Servicio.objects.create(nombre='Consulta', precio_unitario=2000)
+
+    def test_muestra_total_facturado_solo_autorizadas(self):
+        autorizada = Factura.objects.create(cliente=self.cliente, tipo_comprobante='6', estado='AUTORIZADA')
+        FacturaItem.objects.create(factura=autorizada, servicio=self.servicio, cantidad=1, precio_unitario=2000, alicuota_iva='8')
+        Factura.objects.create(cliente=self.cliente, tipo_comprobante='6', estado='BORRADOR')
+
+        response = self.client.get(reverse('ficha_cliente_crm', args=[self.cliente.id]))
+        self.assertContains(response, "2.100")  # 2000 + 5% IVA = 2100, con separador de miles
+
+    def test_muestra_tickets_abiertos(self):
+        Ticket.objects.create(cliente=self.cliente, titulo="Ticket abierto", descripcion="Detalle", estado='PENDIENTE')
+        Ticket.objects.create(cliente=self.cliente, titulo="Ticket cerrado", descripcion="Detalle", estado='CERRADO')
+
+        response = self.client.get(reverse('ficha_cliente_crm', args=[self.cliente.id]))
+        self.assertContains(response, "1")  # 1 ticket abierto en el stat-card
+
+    def test_sin_facturas_no_rompe(self):
+        response = self.client.get(reverse('ficha_cliente_crm', args=[self.cliente.id]))
+        self.assertEqual(response.status_code, 200)

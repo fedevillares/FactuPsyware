@@ -145,8 +145,19 @@ def ficha_cliente(request, cliente_id):
 
     lead = Lead.objects.filter(cliente=cliente).prefetch_related('notas').first()
 
+    facturas_autorizadas = [f for f in facturas if f.estado == 'AUTORIZADA']
+    total_facturado = sum(f.total for f in facturas_autorizadas)
+    anio_actual = timezone.localdate().year
+    facturas_este_anio_count = sum(1 for f in facturas_autorizadas if f.fecha_emision.year == anio_actual)
+    tickets_abiertos_count = sum(1 for t in tickets if not t.esta_cerrado)
+    ultima_factura_fecha = facturas[0].fecha_emision if facturas else None
+
     return render(request, 'crm/ficha_cliente.html', {
         'cliente': cliente, 'eventos': eventos, 'lead': lead,
+        'total_facturado': total_facturado,
+        'facturas_este_anio_count': facturas_este_anio_count,
+        'tickets_abiertos_count': tickets_abiertos_count,
+        'ultima_factura_fecha': ultima_factura_fecha,
     })
 
 
