@@ -1,11 +1,25 @@
 from django.db import models
 
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
+
+LOGO_TAMANO_MAXIMO_MB = 5
+
+
+def validar_tamano_logo(value):
+    if value.size > LOGO_TAMANO_MAXIMO_MB * 1024 * 1024:
+        raise ValidationError(f"El logo no puede superar los {LOGO_TAMANO_MAXIMO_MB} MB.")
+
 
 class EmpresaConfig(models.Model):
     logo = models.ImageField(
         upload_to='empresa/', blank=True, null=True,
         verbose_name="Logo",
-        help_text="Tamaño sugerido: 400×160 px (relación 2.5:1), PNG con fondo transparente, para que se vea nítido en el comprobante impreso."
+        help_text="Tamaño sugerido: 400×160 px (relación 2.5:1), PNG con fondo transparente, para que se vea nítido en el comprobante impreso. Máx. 5 MB.",
+        validators=[
+            FileExtensionValidator(allowed_extensions=['png', 'jpg', 'jpeg', 'webp']),
+            validar_tamano_logo,
+        ],
     )
     nombre_fantasia = models.CharField(max_length=200, blank=True, help_text="Nombre comercial/marca que se muestra como título del comprobante (si está vacío, se usa la Razón Social)")
     razon_social = models.CharField(max_length=200, help_text="Razón Social legal, tal como figura ante ARCA")

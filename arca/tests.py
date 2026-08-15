@@ -4,12 +4,16 @@ Tests de las barreras de seguridad del panel de backup/restauración.
 No tocan la base de datos real: la vista de importación se corta en las
 validaciones (confirmación, extensión, magic bytes) antes de escribir nada.
 """
+import base64
 import io
+from io import BytesIO
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from PIL import Image
 
 from arca.admin import EmpresaConfigForm
 from arca.crypto import cifrar, descifrar
@@ -146,3 +150,46 @@ class EmpresaConfigFormPasswordTests(TestCase):
         guardado = form.save()
         self.assertEqual(guardado.email_password_plano, 'claveNueva')
         self.assertNotEqual(guardado.email_password, 'claveNueva')
+
+
+class LogoValidacionTests(TestCase):
+    def _empresa_valida(self):
+        # get_config() crea el singleton con domicilio/localidad vacios (campos
+        # obligatorios, sin blank=True); full_clean() los rechaza siempre a menos
+        # que se completen aca, lo que enmascararia si el rechazo viene del logo
+        # o de estos otros campos.
+        empresa = EmpresaConfig.get_config()
+        empresa.domicilio = 'Calle Falsa 123'
+        empresa.localidad = 'CABA'
+        return empresa
+
+    def test_extension_invalida_rechazada(self):
+        empresa = self._empresa_valida()
+        empresa.logo = SimpleUploadedFile('logo.html', b'<html></html>', content_type='text/html')
+        with self.assertRaises(ValidationError):
+            empresa.full_clean()
+
+    def test_extension_valida_aceptada(self):
+        png_1x1 = base64.b64decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+        )
+        empresa = self._empresa_valida()
+        empresa.logo = SimpleUploadedFile('logo.png', png_1x1, content_type='image/png')
+        empresa.full_clean()  # no debe lanzar
+
+    def test_archivo_muy_grande_rechazado(self):
+        # Ruido aleatorio: no comprime bien en PNG, asegura que el archivo
+        # resultante realmente supere el limite (una imagen de color solido
+        # comprimiria a unos pocos KB y el test no probaria nada real).
+        import os as os_module
+        ruido = os_module.urandom(1600 * 1600 * 3)
+        img = Image.frombytes('RGB', (1600, 1600), ruido)
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        contenido = buffer.getvalue()
+        self.assertGreater(len(contenido), 5 * 1024 * 1024, "el PNG de prueba debe superar el limite para que el test tenga sentido")
+
+        empresa = self._empresa_valida()
+        empresa.logo = SimpleUploadedFile('logo.png', contenido, content_type='image/png')
+        with self.assertRaises(ValidationError):
+            empresa.full_clean()
