@@ -1,0 +1,134 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Factura #{{ factura.id }}</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    <div class="app-header">
+        <div class="brand">
+            <img src="{% static 'img/logo.png' %}" alt="logo">
+            <span>Facturación</span>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="app-container">
+        <a href="{% url 'listado_facturas' %}" class="btn btn-outline btn-sm" style="margin-bottom:16px;">&larr; Volver al listado</a>
+
+        <div class="card">
+            <div class="card-body">
+                <h1 class="page-title">{{ factura.get_tipo_comprobante_display }} N° {{ factura.numero_completo }}</h1>
+
+                {% if factura.factura_asociada %}
+                <p class="value" style="margin-top:-12px; margin-bottom:16px;">
+                    Asociada a: <a href="{% url 'detalle_factura' factura.factura_asociada.id %}">{{ factura.factura_asociada.get_tipo_comprobante_display }} N° {{ factura.factura_asociada.numero_completo }}</a>
+                </p>
+                {% endif %}
+
+                {% if mensaje %}
+                <div class="alert {% if exito %}alert-success{% else %}alert-danger{% endif %}">
+                    {{ mensaje }}
+                </div>
+                {% endif %}
+
+                <div class="info-grid">
+                    <div>
+                        <div class="label">Cliente</div>
+                        <div class="value">{{ factura.cliente.nombre_completo }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Estado</div>
+                        <div class="value">
+                            {% if factura.estado == 'AUTORIZADA' %}
+                                <span class="badge badge-success">Autorizada</span>
+                            {% elif factura.estado == 'ERROR' %}
+                                <span class="badge badge-danger">Error</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Borrador</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="label">{{ factura.cliente.get_tipo_documento_display }}</div>
+                        <div class="value">{{ factura.cliente.numero_documento }}</div>
+                    </div>
+                    {% if factura.cae %}
+                    <div>
+                        <div class="label">CAE</div>
+                        <div class="value">{{ factura.cae }} (vence {{ factura.cae_vencimiento }})</div>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="label">Fecha</div>
+                        <div class="value">{{ factura.fecha_emision }}</div>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unit.</th>
+                            <th>Subtotal</th>
+                            <th>IVA</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in factura.items.all %}
+                        <tr>
+                            <td>{{ item.servicio.nombre }}</td>
+                            <td>{{ item.cantidad }}</td>
+                            <td>${{ item.precio_unitario|floatformat:2 }}</td>
+                            <td>${{ item.subtotal|floatformat:2 }}</td>
+                            <td>${{ item.iva_monto|floatformat:2 }}</td>
+                            <td>${{ item.total|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="total-row">Total: ${{ factura.total|floatformat:2 }}</div>
+
+                {% if factura.estado == 'BORRADOR' or factura.estado == 'ERROR' %}
+                <div style="margin-top:24px; display:flex; gap:10px; flex-wrap:wrap;">
+                    <form method="post" action="{% url 'emitir_factura' factura.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg">Emitir factura (solicitar CAE a ARCA)</button>
+                    </form>
+
+                    <form method="post" action="{% url 'eliminar_factura' factura.id %}" onsubmit="return confirm('¿Eliminar este borrador? Esta acción no se puede deshacer.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);">Eliminar borrador</button>
+                    </form>
+
+                    <a href="{% url 'comprobante_preview' factura.id %}" class="btn btn-outline" target="_blank">Vista previa del comprobante</a>
+                </div>
+                {% endif %}
+
+                {% if factura.cae %}
+                <div style="margin-top:24px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <a href="{% url 'comprobante_factura' factura.id %}" class="btn btn-outline">Ver comprobante / Imprimir</a>
+
+                    {% if not factura.es_nota_credito and not factura.es_nota_debito %}
+                    <a href="{% url 'generar_nota' factura.id 'credito' %}" class="btn btn-outline">Generar Nota de Crédito</a>
+                    <a href="{% url 'generar_nota' factura.id 'debito' %}" class="btn btn-outline">Generar Nota de Débito</a>
+                    {% endif %}
+                </div>
+                {% if not factura.es_nota_credito and not factura.es_nota_debito %}
+                <p style="margin-top:12px; color: var(--text-muted); font-size:13px;">
+                    Una factura autorizada no se puede eliminar ni modificar. Para anular su efecto, generá una Nota de Crédito por el mismo importe.
+                </p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

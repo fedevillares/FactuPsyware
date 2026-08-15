@@ -1,0 +1,142 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Verificación de entornos ARCA</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    <div class="app-header">
+        <div class="brand">
+            <img src="{% static 'img/logo.png' %}" alt="logo">
+            <span>Facturación</span>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="app-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h1 class="page-title" style="margin:0;">Verificación de entornos</h1>
+            <a href="{% url 'panel_verificacion' %}" class="btn btn-outline btn-sm">↻ Volver a verificar</a>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+
+            <!-- Homologación -->
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h2 style="margin:0;">🧪 Entorno de prueba</h2>
+                    {% if homologacion.listo %}
+                        <span class="badge badge-success">Listo</span>
+                    {% else %}
+                        <span class="badge badge-danger">No listo</span>
+                    {% endif %}
+                </div>
+                <p style="opacity:0.7; margin-top:0;">Homologación AFIP — datos no fiscales, para pruebas.</p>
+
+                <table>
+                    <tbody>
+                        <tr>
+                            <td style="white-space:nowrap;">Certificado</td>
+                            <td>
+                                {% if homologacion.certificado.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Falta</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.certificado.detalle }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="white-space:nowrap;">Clave privada</td>
+                            <td>
+                                {% if homologacion.clave.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Falta</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.clave.detalle }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="white-space:nowrap;">Certificado ↔ clave</td>
+                            <td>
+                                {% if homologacion.correspondencia.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.correspondencia.detalle }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="white-space:nowrap;">WSFE alcanzable</td>
+                            <td>
+                                {% if homologacion.wsfe_alcanzable.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.wsfe_alcanzable.detalle }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="white-space:nowrap;">Login WSAA</td>
+                            <td>
+                                {% if homologacion.login_wsaa.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.login_wsaa.detalle }}</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Producción -->
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h2 style="margin:0;">🏛️ Entorno real</h2>
+                    {% if produccion.listo %}
+                        <span class="badge badge-success">Listo</span>
+                    {% else %}
+                        <span class="badge badge-danger">No listo</span>
+                    {% endif %}
+                </div>
+                <p style="opacity:0.7; margin-top:0;">Producción AFIP — comprobantes fiscales reales.</p>
+
+                <table>
+                    <tbody>
+                        <tr>
+                            <td style="white-space:nowrap;">Certificado</td>
+                            <td>
+                                {% if produccion.certificado.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Falta</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.certificado.detalle }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="white-space:nowrap;">Clave privada</td>
+                            <td>
+                                {% if produccion.clave.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Falta</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.clave.detalle }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="white-space:nowrap;">Certificado ↔ clave</td>
+                            <td>
+                                {% if produccion.correspondencia.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.correspondencia.detalle }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="white-space:nowrap;">WSFE alcanzable</td>
+                            <td>
+                                {% if produccion.wsfe_alcanzable.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.wsfe_alcanzable.detalle }}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="white-space:nowrap;">Login WSAA</td>
+                            <td>
+                                {% if produccion.login_wsaa.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
+                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.login_wsaa.detalle }}</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <p style="margin-top:24px; opacity:0.6; font-size:0.9em;">
+            Este chequeo solo autentica contra AFIP (login WSAA) y consulta el estado del servicio (FEDummy).
+            No emite comprobantes ni modifica datos fiscales.
+        </p>
+    </div>
+</body>
+</html>

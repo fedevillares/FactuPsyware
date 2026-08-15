@@ -1,0 +1,282 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Comprobante {{ factura.numero }}</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        @media print {
+            .no-print { display: none; }
+            .hoja, body { background: white !important; color: black !important; }
+            [data-theme="dark"] .hoja, [data-theme="dark"] td, [data-theme="dark"] th, [data-theme="dark"] table {
+                background: white !important; color: black !important; border-color: #000 !important;
+            }
+            .hoja {
+                max-width: none;
+                margin: 0;
+                padding: 0;
+                border: none;
+            }
+        }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+            margin: 0;
+        }
+        .hoja {
+            max-width: 190mm;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #999;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { border: 1px solid #000; padding: 5px 8px; vertical-align: top; }
+        .text-end { text-align: right; }
+        .text-center { text-align: center; }
+        h2 { margin: 0; font-size: 18px; }
+        .logo-box { max-height: 60px; }
+        .tipo-box {
+            border: 2px solid #000;
+            text-align: center;
+            font-weight: bold;
+            font-size: 36px;
+            padding: 5px;
+        }
+        .tipo-cod { font-size: 11px; font-weight: normal; }
+        .leyenda { font-style: italic; text-align: center; padding: 10px 0; border: 1px solid #000; margin-top: -1px; }
+        .seccion-titulo { font-weight: bold; font-style: italic; }
+        .totales-table td { border: none; padding: 2px 8px; }
+        .qr-cell { width: 130px; text-align: center; vertical-align: middle; }
+
+        .items, .items th, .items td {
+            border: none;
+        }
+        .items {
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+            margin-top: -1px;
+        }
+        .items th {
+            border-bottom: 1px solid #000;
+            font-weight: bold;
+            font-style: normal;
+            padding-bottom: 6px;
+        }
+        .items td {
+            padding-top: 4px;
+            padding-bottom: 4px;
+        }
+        .no-print a, .no-print button { margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle no-print" onclick="toggleTheme()">🌙</button>
+
+    <div class="no-print" style="max-width:850px; margin: 10px auto;">
+        <a href="{% url 'detalle_factura' factura.id %}">&larr; Volver</a>
+        <button onclick="window.print()">Imprimir / Guardar PDF</button>
+    </div>
+
+    <div class="hoja">
+
+        <div class="text-center" style="font-weight:bold; margin-bottom:6px;">ORIGINAL</div>
+
+        <!-- Encabezado: Logo, Tipo, Datos emisor -->
+        <table>
+            <tr>
+                <td style="width: 45%;" rowspan="3">
+                    <img src="{% static 'img/logo.png' %}" class="logo-box" alt="logo"><br>
+                    <strong>{{ empresa.razon_social }}</strong>
+                </td>
+                <td style="width: 12%; text-align:center;" rowspan="3">
+                    <div class="tipo-box">
+                        {% if factura.tipo_comprobante == '1' %}A
+                        {% elif factura.tipo_comprobante == '6' %}B
+                        {% elif factura.tipo_comprobante == '11' %}C
+                        {% endif %}
+                        <div class="tipo-cod">COD. {{ factura.tipo_comprobante|stringformat:"03d" }}</div>
+                    </div>
+                </td>
+                <td style="width: 43%;">
+                    <h2>
+                        {% if factura.es_nota_credito %}NOTA DE CRÉDITO
+                        {% elif factura.es_nota_debito %}NOTA DE DÉBITO
+                        {% else %}FACTURA
+                        {% endif %}
+                    </h2>
+                    <strong>Punto de Venta:</strong> {{ factura.punto_venta|stringformat:"05d" }}
+                    &nbsp;&nbsp;
+                    <strong>Comp. Nro:</strong> {{ factura.numero|stringformat:"08d" }}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <strong>Fecha de Emisión:</strong> {{ factura.fecha_emision|date:"d/m/Y" }}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <strong>CUIT:</strong> {{ empresa.cuit }}<br>
+                    <strong>Ingresos Brutos:</strong> {{ empresa.ingresos_brutos|default:"-" }}<br>
+                    <strong>Fecha de Inicio de Actividades:</strong> {{ empresa.inicio_actividades|date:"d/m/Y" }}
+                </td>
+            </tr>
+        </table>
+
+        <!-- Domicilio y condición IVA del emisor -->
+        <table style="margin-top: -1px;">
+            <tr>
+                <td>
+                    <strong>Domicilio Comercial:</strong> {{ empresa.domicilio }}, {{ empresa.localidad }}<br>
+                    <strong>Condición frente al IVA:</strong> {{ empresa.condicion_iva }}
+                </td>
+            </tr>
+        </table>
+
+        <!-- Período / vencimiento (solo si aplica) -->
+        {% if factura.periodo_desde or factura.fecha_vto_pago %}
+        <table style="margin-top: -1px;">
+            <tr>
+                {% if factura.periodo_desde %}
+                <td><strong>Período Facturado Desde:</strong> {{ factura.periodo_desde|date:"d/m/Y" }}</td>
+                <td><strong>Hasta:</strong> {{ factura.periodo_hasta|date:"d/m/Y" }}</td>
+                {% endif %}
+                {% if factura.fecha_vto_pago %}
+                <td><strong>Fecha de Vto. para el pago:</strong> {{ factura.fecha_vto_pago|date:"d/m/Y" }}</td>
+                {% endif %}
+            </tr>
+        </table>
+        {% endif %}
+
+        <!-- Datos del receptor -->
+        <table style="margin-top: -1px;">
+            <tr>
+                <td style="width: 50%;">
+                    <strong>{{ factura.cliente.get_tipo_documento_display }}:</strong> {{ factura.cliente.numero_documento }}<br>
+                    <strong>Condición frente al IVA:</strong> {{ factura.cliente.get_condicion_iva_display }}<br>
+                    <strong>Condición de venta:</strong> {{ factura.get_condicion_venta_display }}
+                </td>
+                <td style="width: 50%;">
+                    <strong>Apellido y Nombre / Razón Social:</strong> {{ factura.cliente.nombre_completo }}<br>
+                    <strong>Domicilio:</strong> {{ factura.cliente.direccion|default:"-" }}
+                </td>
+            </tr>
+        </table>
+
+        <!-- Comprobantes asociados (obligatorio en Notas de Crédito/Débito) -->
+        {% if factura.factura_asociada %}
+        <table style="margin-top: -1px;">
+            <tr>
+                <td>
+                    <span class="seccion-titulo">Comprobantes Asociados</span><br>
+                    {{ factura.factura_asociada.get_tipo_comprobante_display }}
+                    N° {{ factura.factura_asociada.numero_completo }}
+                    del {{ factura.factura_asociada.fecha_emision|date:"d/m/Y" }}
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+
+        <!-- Detalle de items -->
+        <table style="margin-top: -1px;" class="items">
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Producto / Servicio</th>
+                    <th class="text-center">Cantidad</th>
+                    <th class="text-center">U. medida</th>
+                    <th class="text-end">Precio Unit.</th>
+                    <th class="text-center">% Bonif</th>
+                    <th class="text-end">Subtotal</th>
+                    <th class="text-center">Alicuota IVA</th>
+                    <th class="text-end">Subtotal c/IVA</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in factura.items.all %}
+                <tr>
+                    <td class="text-center">{{ item.servicio.id }}</td>
+                    <td>{{ item.servicio.nombre }}{% if item.servicio.descripcion %} - {{ item.servicio.descripcion }}{% endif %}</td>
+                    <td class="text-center">{{ item.cantidad }}</td>
+                    <td class="text-center">unidades</td>
+                    <td class="text-end">{{ item.precio_unitario|floatformat:2 }}</td>
+                    <td class="text-center">0,00</td>
+                    <td class="text-end">{{ item.subtotal|floatformat:2 }}</td>
+                    <td class="text-center">{{ item.get_alicuota_iva_display }}</td>
+                    <td class="text-end">{{ item.total|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                {% for i in "x"|rjust:6 %}
+                <tr><td colspan="9">&nbsp;</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Totales -->
+        <table style="margin-top: -1px;">
+            <tr>
+                <td style="width: 55%; border-right: none;">
+                    Importe Otros Tributos: $ {{ otros_impuestos|default:"0,00"|floatformat:2 }}
+                </td>
+                <td style="width: 45%;">
+                    <table class="totales-table">
+                        <tr>
+                            <td class="text-end"><strong>Importe Neto Gravado: $</strong></td>
+                            <td class="text-end">{{ factura.subtotal|floatformat:2 }}</td>
+                        </tr>
+                        {% for alic in factura.desglose_iva %}
+                        <tr>
+                            <td class="text-end"><strong>IVA {{ alic.porcentaje }}%: $</strong></td>
+                            <td class="text-end">{{ alic.importe|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr>
+                            <td class="text-end"><strong>Importe Otros Tributos: $</strong></td>
+                            <td class="text-end">{{ otros_impuestos|default:"0,00"|floatformat:2 }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end"><strong>Importe Total: $</strong></td>
+                            <td class="text-end"><strong>{{ factura.total|floatformat:2 }}</strong></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Leyenda -->
+        {% if empresa.leyenda %}
+        <div class="leyenda">"{{ empresa.leyenda }}"</div>
+        {% endif %}
+
+        <!-- CAE y QR -->
+        <table style="margin-top: -1px;">
+            <tr>
+                <td class="qr-cell">
+                    {% if qr_b64 %}
+                    <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR ARCA" width="110">
+                    {% endif %}
+                </td>
+                <td>
+                    {% if es_preview %}
+                    <strong style="color:#b00;">VISTA PREVIA &mdash; sin validez fiscal, no tiene CAE</strong><br>
+                    <span style="font-size: 10px;">Este comprobante todavía no fue autorizado por ARCA. Generado solo para revisar el diseño.</span>
+                    {% else %}
+                    <strong>Comprobante Autorizado</strong><br>
+                    <span style="font-size: 10px;">Esta Agencia no se responsabiliza por los datos ingresados en el detalle de la operación</span><br><br>
+                    <strong>CAE N°:</strong> {{ factura.cae }}<br>
+                    <strong>Fecha de Vto. de CAE:</strong> {{ factura.cae_vencimiento|date:"d/m/Y" }}
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+    </div>
+</body>
+</html>

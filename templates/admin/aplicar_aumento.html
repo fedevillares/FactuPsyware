@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div style="padding: 20px;">
+    <h1 style="margin-bottom: 16px;">Aplicar aumento por inflación</h1>
+    <p>Se aplicará el porcentaje a los siguientes servicios:</p>
+    <ul>
+        {% for servicio in servicios %}
+        <li>{{ servicio.nombre }} — precio actual: ${{ servicio.precio_unitario|floatformat:2 }}</li>
+        {% endfor %}
+    </ul>
+
+    <form method="post" style="margin-top: 20px;">
+        {% csrf_token %}
+        {% for servicio in servicios %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ servicio.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="aplicar_aumento">
+
+        <div style="margin-bottom: 16px; max-width: 300px;">
+            <label for="porcentaje">Porcentaje de aumento (%)</label>
+            <input type="number" name="porcentaje" id="porcentaje" step="0.01" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text);">
+        </div>
+
+        <button type="submit" name="apply" value="1" class="button">Aplicar aumento</button>
+    </form>
+</div>
+{% endblock %}

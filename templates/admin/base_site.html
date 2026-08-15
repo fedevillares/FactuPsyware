@@ -1,0 +1,172 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block branding %}
+<div id="site-name">
+    <a href="{% url 'admin:index' %}" style="display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none;">
+        <img src="{% static 'img/logo.png' %}" style="height: 32px;">
+        <span style="font-weight:600; font-size:15px;">Panel de Gestión</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<link href="{% static 'css/theme.css' %}" rel="stylesheet">
+<script src="{% static 'js/theme.js' %}"></script>
+{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    :root {
+        --primary: #2563eb;
+        --secondary: #6b7785;
+        --primary-fg: #fff;
+        --header-color: var(--text);
+        --header-branding-color: var(--text);
+        --header-bg: var(--bg-header);
+        --header-link-color: var(--text);
+        --breadcrumbs-fg: var(--text-muted);
+        --breadcrumbs-bg: var(--bg-header);
+        --link-fg: #2563eb;
+        --link-hover-color: #1d4ed8;
+        --link-selected-fg: #2563eb;
+        --object-tools-bg: #2563eb;
+        --object-tools-hover-bg: #1d4ed8;
+    }
+
+    *, input, select, textarea, button, table, th, td {
+        font-family: 'Inter', system-ui, sans-serif !important;
+    }
+
+    body { background: var(--bg) !important; color: var(--text) !important; }
+
+    #header {
+        background: var(--bg-header) !important;
+        color: var(--text) !important;
+        border-bottom: 1px solid var(--border);
+    }
+    #header a:link, #header a:visited { color: var(--text) !important; }
+    #site-name a { color: var(--text) !important; }
+
+    #content, .module, #changelist, .dashboard .module table, .results, .paginator,
+    .form-row, fieldset.module, .object-tools, #toolbar,
+    #content-related, #content-related .module, #recent-actions-module {
+        background: var(--bg-card) !important;
+        color: var(--text) !important;
+        border-color: var(--border) !important;
+    }
+
+    #content .module h2,
+    #content .module caption,
+    #content-main .module h2,
+    .dashboard .module h2,
+    .dashboard .module caption,
+    .inline-group h2,
+    #recent-actions-module h2,
+    #recent-actions-module h3 {
+        background: #2563eb !important;
+        color: #ffffff !important;
+    }
+    #content .module h2 a,
+    #content .module caption a,
+    #content-main .module h2 a,
+    .dashboard .module h2 a,
+    .dashboard .module caption a,
+    .inline-group h2 a,
+    #recent-actions-module h2 a,
+    #recent-actions-module h3 a {
+        color: #ffffff !important;
+    }
+
+    #content a, #content-related a, #recent-actions-module a,
+    .dashboard a, #changelist a {
+        color: #2563eb !important;
+    }
+    #content a:hover, #content-related a:hover, #recent-actions-module a:hover {
+        color: #1d4ed8 !important;
+    }
+
+    div.breadcrumbs {
+        background: var(--bg-header) !important;
+        color: var(--text-muted) !important;
+        border-bottom: 1px solid var(--border);
+    }
+    div.breadcrumbs a { color: #2563eb !important; }
+
+    .button, input[type=submit], input[type=button], .submit-row input, a.button {
+        background: #2563eb !important;
+        border-radius: 6px;
+        border: none !important;
+        color: #fff !important;
+    }
+    .button:hover, input[type=submit]:hover { background: #1d4ed8 !important; }
+
+    input, select, textarea {
+        background: var(--bg-card) !important;
+        color: var(--text) !important;
+        border: 1px solid var(--border) !important;
+    }
+
+    table thead th { background: var(--bg) !important; color: var(--text-muted) !important; }
+
+    .theme-toggle-admin {
+        cursor: pointer;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+        margin-left: 10px;
+    }
+
+    #logout-form {
+        display: inline;
+    }
+    #logout-form button {
+        background: none;
+        border: none;
+        color: #2563eb;
+        cursor: pointer;
+        font-size: inherit;
+        padding: 0;
+        text-decoration: underline;
+        font-family: inherit;
+    }
+</style>
+{% endblock %}
+
+{% block usertools %}
+{% if has_permission %}
+<div id="user-tools">
+    <button class="theme-toggle-admin" onclick="toggleTheme()">🌙</button>
+    {% block welcome-msg %}
+        {% translate 'Welcome,' %}
+        <strong>{% firstof user.get_short_name user.get_username %}</strong>.
+    {% endblock %}
+    {% block userlinks %}
+        <a href="/facturas/">Facturación</a> /
+        {% if site_url %}
+            <a href="{{ site_url }}">{% translate 'View site' %}</a> /
+        {% endif %}
+        {% if user.is_active and user.is_staff %}
+            {% url 'django-admindocs-docroot' as docsroot %}
+            {% if docsroot %}
+                <a href="{{ docsroot }}">{% translate 'Documentation' %}</a> /
+            {% endif %}
+        {% endif %}
+        {% if user.has_usable_password %}
+            <a href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a> /
+        {% endif %}
+        <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
+            {% csrf_token %}
+            <button type="submit">{% translate 'Log out' %}</button>
+        </form>
+    {% endblock %}
+</div>
+{% endif %}
+{% endblock %}

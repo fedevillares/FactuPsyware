@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Facturas</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    <div class="app-header">
+        <div class="brand">
+            <img src="{% static 'img/logo.png' %}" alt="logo">
+            <span>Facturación</span>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    </div>
+
+    <div class="app-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <h1 class="page-title" style="margin:0;">Facturas</h1>
+            <a href="/admin/facturas/factura/add/" class="btn btn-primary">+ Nueva factura</a>
+        </div>
+
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tipo</th>
+                        <th>Número</th>
+                        <th>Cliente</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>CAE</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for factura in facturas %}
+                    <tr>
+                        <td>{{ factura.id }}</td>
+                        <td>{{ factura.get_tipo_comprobante_display }}</td>
+                        <td>{{ factura.numero_completo }}</td>
+                        <td>{{ factura.cliente.nombre_completo }}</td>
+                        <td>${{ factura.total|floatformat:2 }}</td>
+                        <td>
+                            {% if factura.estado == 'AUTORIZADA' %}
+                                <span class="badge badge-success">Autorizada</span>
+                            {% elif factura.estado == 'ERROR' %}
+                                <span class="badge badge-danger">Error</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Borrador</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ factura.cae|default:"-" }}</td>
+                        <td><a href="{% url 'detalle_factura' factura.id %}" class="btn btn-outline btn-sm">Ver</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
