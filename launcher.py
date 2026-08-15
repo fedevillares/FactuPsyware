@@ -20,6 +20,7 @@ antes de usarlo, para evitar el WinError 267 (NotADirectoryError) que
 rompia la version anterior del launcher.
 """
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -203,6 +204,42 @@ def aplicar_migraciones_si_hace_falta():
         subprocess.run([str(VENV_PYTHON), "manage.py", "migrate"], cwd=str(BASE_DIR))
 
 
+def asegurar_permisos_restringidos(ruta):
+    """Restringe una carpeta o archivo sensible (claves privadas de AFIP,
+    SECRET_KEY, db.sqlite3) a solo el usuario actual, usando ACLs reales de
+    Windows -- os.chmod no tiene efecto en NTFS. No es fatal si falla (por
+    ejemplo, en una unidad de red que no soporte ACLs)."""
+    if not ruta.exists():
+        return
+    usuario = os.environ.get("USERNAME", "")
+    if not usuario:
+        return
+    if ruta.is_dir():
+        args = ["icacls", str(ruta), "/inheritance:r", "/grant:r", f"{usuario}:(OI)(CI)F", "/T"]
+    else:
+        args = ["icacls", str(ruta), "/inheritance:r", "/grant:r", f"{usuario}:F"]
+    subprocess.run(args, capture_output=True)
+
+
+def advertir_si_carpeta_sincronizada():
+    """Las claves privadas de AFIP no deberian vivir en una carpeta que se
+    sincroniza a la nube (OneDrive, Google Drive, Dropbox): un backup en la
+    nube comprometido filtra la clave de produccion. Solo advierte, no
+    bloquea el arranque."""
+    ruta_str = str(BASE_DIR).lower()
+    marcadores = ("onedrive", "google drive", "dropbox", "icloud")
+    if any(m in ruta_str for m in marcadores):
+        print()
+        print("=" * 60)
+        print("ADVERTENCIA: la carpeta del proyecto parece estar dentro de")
+        print("una carpeta sincronizada a la nube (OneDrive/Drive/Dropbox).")
+        print("Las claves privadas de AFIP en certificados/ se subirian a")
+        print("la nube junto con el resto de la carpeta. Se recomienda mover")
+        print("el proyecto fuera de esa carpeta.")
+        print("=" * 60)
+        print()
+
+
 def levantar_servidor():
     set_estado("Iniciando el servidor…")
     LOGS_DIR.mkdir(exist_ok=True)
@@ -261,6 +298,8 @@ def main():
         print("=" * 60)
         pausar_y_salir(1)
 
+    advertir_si_carpeta_sincronizada()
+
     iniciar_servidor_estado()
     abrir_pantalla_inicio()
     matar_procesos_colgados()
@@ -282,6 +321,9 @@ def main():
 
     instalar_dependencias_si_hace_falta()
     aplicar_migraciones_si_hace_falta()
+    asegurar_permisos_restringidos(BASE_DIR / "certificados")
+    asegurar_permisos_restringidos(BASE_DIR / "secret_key.txt")
+    asegurar_permisos_restringidos(BASE_DIR / "db.sqlite3")
     levantar_servidor()
 
 
