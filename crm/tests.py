@@ -109,7 +109,7 @@ class ActualizarEstadoLeadViewTests(TestCase):
         response = self.client.post(
             reverse('actualizar_estado_lead', args=[self.lead.id]), {'estado': 'CONTACTADO'}
         )
-        self.assertEqual(response.status_code, 204)
+        self.assertRedirects(response, reverse('detalle_lead', args=[self.lead.id]))
         self.lead.refresh_from_db()
         self.assertEqual(self.lead.estado, 'CONTACTADO')
 
@@ -394,14 +394,39 @@ class RecordatoriosTests(TestCase):
 
     @patch('crm.recordatorios.empresa_tiene_email_configurado', return_value=True)
     @patch('crm.recordatorios.conexion_smtp')
-    def test_marca_enviado_aunque_falle_el_envio(self, mock_conexion, mock_configurado):
+    def test_no_marca_enviado_si_falla_el_envio(self, mock_conexion, mock_configurado):
+        """Si el envío falla, recordatorio_enviado queda en False para reintentar
+        en la próxima carga del dashboard (no se pierde el recordatorio)."""
         lead = Lead.objects.create(nombre="Marta Ibáñez")
         actividad = Actividad.objects.create(lead=lead, titulo="Llamar", fecha=date.today() - timedelta(days=1))
         with patch('crm.recordatorios.EmailMessage') as mock_email_cls:
             mock_email_cls.return_value.send.side_effect = Exception("fallo de red simulado")
             enviar_recordatorios_vencidos()
         actividad.refresh_from_db()
+        self.assertFalse(actividad.recordatorio_enviado)
+
+    @patch('crm.recordatorios.empresa_tiene_email_configurado', return_value=True)
+    @patch('crm.recordatorios.conexion_smtp')
+    def test_marca_enviado_si_el_envio_tiene_exito(self, mock_conexion, mock_configurado):
+        lead = Lead.objects.create(nombre="Marta Ibáñez")
+        actividad = Actividad.objects.create(lead=lead, titulo="Llamar", fecha=date.today() - timedelta(days=1))
+        with patch('crm.recordatorios.EmailMessage') as mock_email_cls:
+            mock_email_cls.return_value.send.return_value = 1
+            enviar_recordatorios_vencidos()
+        actividad.refresh_from_db()
         self.assertTrue(actividad.recordatorio_enviado)
+
+    @patch('crm.recordatorios.empresa_tiene_email_configurado', return_value=True)
+    @patch('crm.recordatorios.conexion_smtp')
+    def test_actividad_vencida_hoy_no_cuenta(self, mock_conexion, mock_configurado):
+        """Vencida = estrictamente antes de hoy, no incluye hoy (issue #1)."""
+        lead = Lead.objects.create(nombre="Marta Ibáñez")
+        actividad = Actividad.objects.create(lead=lead, titulo="Llamar", fecha=date.today())
+        with patch('crm.recordatorios.EmailMessage') as mock_email_cls:
+            enviar_recordatorios_vencidos()
+            mock_email_cls.assert_not_called()
+        actividad.refresh_from_db()
+        self.assertFalse(actividad.recordatorio_enviado)
 
 
 class CrmDashboardViewTests(TestCase):

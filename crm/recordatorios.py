@@ -16,15 +16,15 @@ from .models import Actividad
 
 def enviar_recordatorios_vencidos():
     """Manda un email por cada actividad vencida sin recordatorio enviado.
-    Best-effort y silencioso: si no hay cuenta configurada o el envío
-    falla, no se reintenta — se marca recordatorio_enviado igual, para no
-    reintentar la conexión de red en cada carga del dashboard."""
+    Best-effort y silencioso: si no hay cuenta configurada, no hace nada.
+    Si el envío falla, no se marca recordatorio_enviado, así se reintenta
+    en la próxima carga del dashboard (sin propagar el error al usuario)."""
     empresa = EmpresaConfig.get_config()
     if not empresa_tiene_email_configurado(empresa):
         return
 
     vencidas = Actividad.objects.filter(
-        hecha=False, recordatorio_enviado=False, fecha__lte=timezone.localdate(),
+        hecha=False, recordatorio_enviado=False, fecha__lt=timezone.localdate(),
     ).select_related('lead')
 
     if not vencidas:
@@ -47,6 +47,6 @@ def enviar_recordatorios_vencidos():
         try:
             email.send(fail_silently=False)
         except Exception:
-            pass
+            continue
         actividad.recordatorio_enviado = True
         actividad.save(update_fields=['recordatorio_enviado'])

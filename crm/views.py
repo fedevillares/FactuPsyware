@@ -1,6 +1,8 @@
+import threading
+
 from django.contrib.auth.decorators import login_required
 from django.db import models
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -11,6 +13,17 @@ from tickets.models import Ticket
 
 from .models import Actividad, Lead, NotaLead
 from .recordatorios import enviar_recordatorios_vencidos
+
+
+def _enviar_recordatorios_en_segundo_plano():
+    """Wrapper para el hilo en background: enviar_recordatorios_vencidos ya
+    es best-effort y silenciosa, pero una excepción no prevista (ej. error
+    de DB) no debe quedar sin capturar en un hilo daemon — eso solo ensucia
+    los logs sin que nadie pueda actuar sobre el error."""
+    try:
+        enviar_recordatorios_vencidos()
+    except Exception:
+        pass
 
 
 @login_required
@@ -59,7 +72,12 @@ def nuevo_lead(request):
 @login_required
 def detalle_lead(request, lead_id):
     lead = get_object_or_404(Lead.objects.select_related('cliente'), id=lead_id)
-    return render(request, 'crm/detalle_lead.html', {'lead': lead})
+
+    bitacora = [{'fecha': a.fecha, 'tipo': 'actividad', 'obj': a} for a in lead.actividades.all()]
+    bitacora += [{'fecha': n.fecha.date(), 'tipo': 'nota', 'obj': n} for n in lead.notas.all()]
+    bitacora.sort(key=lambda e: e['fecha'], reverse=True)
+
+    return render(request, 'crm/detalle_lead.html', {'lead': lead, 'bitacora': bitacora})
 
 
 @login_required
@@ -81,7 +99,11 @@ def actualizar_estado_lead(request, lead_id):
         return HttpResponseBadRequest("Estado inválido.")
     lead.estado = estado
     lead.save(update_fields=['estado', 'actualizado'])
-    return HttpResponse(status=204)
+    # Redirige (en vez de 204) para que el <select> del detalle del lead
+    # (un POST de formulario normal, no AJAX) muestre la página actualizada.
+    # El fetch() del Kanban también funciona: sigue el redirect y termina en
+    # un 200, así que response.ok sigue dando true igual que antes con el 204.
+    return redirect('detalle_lead', lead_id=lead.id)
 
 
 def _validar_datos_cliente(datos):
@@ -237,7 +259,7 @@ def marcar_actividad_hecha(request, actividad_id):
 
 @login_required
 def crm_dashboard(request):
-    enviar_recordatorios_vencidos()
+    threading.Thread(target=_enviar_recordatorios_en_segundo_plano, daemon=True).start()
 
     hoy = timezone.localdate()
     leads_activos = Lead.objects.exclude(estado__in=['GANADO', 'PERDIDO'])
@@ -246,10 +268,10 @@ def crm_dashboard(request):
     tasa_conversion = round(ganados / (ganados + perdidos) * 100, 1) if (ganados + perdidos) else 0
 
     actividades_vencidas = Actividad.objects.filter(
-        hecha=False, fecha__lte=hoy,
+        hecha=False, fecha__lt=hoy,
     ).select_related('lead').order_by('fecha')
     contactos_vencidos = leads_activos.filter(
-        proximo_contacto__lte=hoy,
+        proximo_contacto__lt=hoy,
     ).order_by('proximo_contacto')
 
     facturas_autorizadas = Factura.objects.filter(
