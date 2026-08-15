@@ -236,3 +236,45 @@ class FichaClienteViewTests(TestCase):
         })
         cliente = Cliente.objects.get(numero_documento='30999888')
         self.assertRedirects(response, reverse('ficha_cliente_crm', args=[cliente.id]))
+
+
+class EditarLeadViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester7', password='pass12345')
+        self.client.force_login(self.user)
+        self.lead = Lead.objects.create(nombre="Roberto Paz", telefono="1100000000", origen='WEB')
+
+    def test_form_precarga_datos_actuales(self):
+        response = self.client.get(reverse('editar_lead', args=[self.lead.id]))
+        self.assertContains(response, "Roberto Paz")
+        self.assertContains(response, "1100000000")
+
+    def test_editar_lead_guarda_cambios(self):
+        response = self.client.post(reverse('editar_lead', args=[self.lead.id]), {
+            'nombre': 'Roberto Paz Actualizado', 'telefono': '1199999999',
+            'email': 'roberto@example.com', 'origen': 'REFERIDO',
+            'proximo_contacto': '2026-09-01',
+        })
+        self.assertRedirects(response, reverse('detalle_lead', args=[self.lead.id]))
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.nombre, 'Roberto Paz Actualizado')
+        self.assertEqual(self.lead.telefono, '1199999999')
+        self.assertEqual(self.lead.origen, 'REFERIDO')
+
+    def test_editar_no_modifica_estado_ni_cliente(self):
+        self.lead.estado = 'CONTACTADO'
+        self.lead.save(update_fields=['estado', 'actualizado'])
+        self.client.post(reverse('editar_lead', args=[self.lead.id]), {
+            'nombre': 'Roberto Paz', 'telefono': '', 'email': '', 'origen': 'OTRO',
+            'proximo_contacto': '',
+        })
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.estado, 'CONTACTADO')
+        self.assertIsNone(self.lead.cliente_id)
+
+    def test_editar_sin_nombre_muestra_error(self):
+        response = self.client.post(reverse('editar_lead', args=[self.lead.id]), {'nombre': '', 'origen': 'OTRO'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "necesita un nombre")
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.nombre, "Roberto Paz")

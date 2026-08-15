@@ -20,13 +20,16 @@
                     <p class="page-eyebrow" style="margin:0 0 4px;">Lead — {{ lead.get_estado_display }}</p>
                     <span style="font-size:18px; font-weight:700;">{{ lead.nombre }}</span>
                 </div>
-                {% if lead.esta_ganado %}
-                <span class="badge badge-success">Ganado</span>
-                {% elif lead.estado == 'PERDIDO' %}
-                <span class="badge badge-danger">Perdido</span>
-                {% else %}
-                <span class="badge badge-secondary">{{ lead.get_estado_display }}</span>
-                {% endif %}
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <a href="{% url 'editar_lead' lead.id %}" class="btn btn-ghost btn-sm">Editar</a>
+                    {% if lead.esta_ganado %}
+                    <span class="badge badge-success">Ganado</span>
+                    {% elif lead.estado == 'PERDIDO' %}
+                    <span class="badge badge-danger">Perdido</span>
+                    {% else %}
+                    <span class="badge badge-secondary">{{ lead.get_estado_display }}</span>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="card-body">

@@ -146,3 +146,45 @@ def ficha_cliente(request, cliente_id):
     return render(request, 'crm/ficha_cliente.html', {
         'cliente': cliente, 'eventos': eventos, 'lead': lead,
     })
+
+
+@login_required
+def editar_lead(request, lead_id):
+    lead = get_object_or_404(Lead, id=lead_id)
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        email = request.POST.get('email', '').strip()
+        origen = request.POST.get('origen', '').strip()
+        proximo_contacto = request.POST.get('proximo_contacto', '').strip() or None
+
+        if not nombre:
+            return render(request, 'crm/editar_lead.html', {
+                'lead': lead,
+                'error': "El lead necesita un nombre.",
+                'datos': {
+                    'nombre': nombre, 'telefono': telefono, 'email': email,
+                    'origen': origen, 'proximo_contacto': proximo_contacto or '',
+                },
+                'origen_choices': Lead.ORIGENES,
+            })
+        if origen not in dict(Lead.ORIGENES):
+            origen = 'OTRO'
+
+        lead.nombre = nombre
+        lead.telefono = telefono
+        lead.email = email
+        lead.origen = origen
+        lead.proximo_contacto = proximo_contacto
+        lead.save(update_fields=['nombre', 'telefono', 'email', 'origen', 'proximo_contacto', 'actualizado'])
+        return redirect('detalle_lead', lead_id=lead.id)
+
+    datos = {
+        'nombre': lead.nombre, 'telefono': lead.telefono, 'email': lead.email,
+        'origen': lead.origen,
+        'proximo_contacto': lead.proximo_contacto.strftime('%Y-%m-%d') if lead.proximo_contacto else '',
+    }
+    return render(request, 'crm/editar_lead.html', {
+        'lead': lead, 'datos': datos, 'origen_choices': Lead.ORIGENES,
+    })
