@@ -370,3 +370,80 @@ class MarcarActividadHechaViewTests(TestCase):
     def test_get_no_permitido(self):
         response = self.client.get(reverse('marcar_actividad_hecha', args=[self.actividad.id]))
         self.assertEqual(response.status_code, 405)
+
+
+from unittest.mock import patch
+from crm.recordatorios import enviar_recordatorios_vencidos
+
+
+class RecordatoriosTests(TestCase):
+    def test_sin_email_configurado_no_hace_nada(self):
+        """EmpresaConfig por defecto no tiene email configurado (test DB limpia),
+        así que esto no debe intentar ninguna conexión de red."""
+        lead = Lead.objects.create(nombre="Marta Ibáñez")
+        Actividad.objects.create(lead=lead, titulo="Llamar", fecha=date.today() - timedelta(days=1))
+        enviar_recordatorios_vencidos()
+        actividad = lead.actividades.first()
+        self.assertFalse(actividad.recordatorio_enviado)
+
+    def test_no_toca_actividades_no_vencidas(self):
+        lead = Lead.objects.create(nombre="Marta Ibáñez")
+        Actividad.objects.create(lead=lead, titulo="Llamar", fecha=date.today() + timedelta(days=5))
+        enviar_recordatorios_vencidos()
+        self.assertFalse(lead.actividades.first().recordatorio_enviado)
+
+    @patch('crm.recordatorios.empresa_tiene_email_configurado', return_value=True)
+    @patch('crm.recordatorios.conexion_smtp')
+    def test_marca_enviado_aunque_falle_el_envio(self, mock_conexion, mock_configurado):
+        lead = Lead.objects.create(nombre="Marta Ibáñez")
+        actividad = Actividad.objects.create(lead=lead, titulo="Llamar", fecha=date.today() - timedelta(days=1))
+        with patch('crm.recordatorios.EmailMessage') as mock_email_cls:
+            mock_email_cls.return_value.send.side_effect = Exception("fallo de red simulado")
+            enviar_recordatorios_vencidos()
+        actividad.refresh_from_db()
+        self.assertTrue(actividad.recordatorio_enviado)
+
+
+class CrmDashboardViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester10', password='pass12345')
+        self.client.force_login(self.user)
+
+    def test_requiere_login(self):
+        self.client.logout()
+        response = self.client.get(reverse('crm_dashboard'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_dashboard_muestra_leads_activos(self):
+        Lead.objects.create(nombre="Nuevo Lead", estado='NUEVO')
+        Lead.objects.create(nombre="Lead Ganado", estado='GANADO')
+        response = self.client.get(reverse('crm_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Nuevo Lead")
+
+    def test_tasa_conversion_cero_sin_datos(self):
+        response = self.client.get(reverse('crm_dashboard'))
+        self.assertContains(response, "0")
+
+    def test_muestra_actividad_vencida(self):
+        lead = Lead.objects.create(nombre="Con actividad vencida")
+        Actividad.objects.create(lead=lead, titulo="Llamar urgente", fecha=date.today() - timedelta(days=2))
+        response = self.client.get(reverse('crm_dashboard'))
+        self.assertContains(response, "Llamar urgente")
+
+    def test_muestra_top_clientes_por_facturacion(self):
+        cliente = Cliente.objects.create(
+            nombre_completo='Empresa Top', tipo_documento='80',
+            numero_documento='20333444555', condicion_iva='RI',
+        )
+        servicio = Servicio.objects.create(nombre='Consulta', precio_unitario=5000)
+        factura = Factura.objects.create(cliente=cliente, tipo_comprobante='6', estado='AUTORIZADA')
+        FacturaItem.objects.create(factura=factura, servicio=servicio, cantidad=1, precio_unitario=5000, alicuota_iva='5')
+
+        response = self.client.get(reverse('crm_dashboard'))
+        self.assertContains(response, "Empresa Top")
+
+    def test_pipeline_sigue_andando_en_su_nueva_ruta(self):
+        response = self.client.get(reverse('kanban_leads'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.request['PATH_INFO'], '/crm/pipeline/')

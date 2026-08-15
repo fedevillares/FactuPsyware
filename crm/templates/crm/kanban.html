@@ -20,6 +20,8 @@
             <a href="{% url 'nuevo_lead' %}" class="btn btn-primary">+ Nuevo lead</a>
         </div>
 
+        {% include "crm/_subnav.html" %}
+
         <div class="kanban-board">
             {% for clave, etiqueta, leads in columnas %}
             <div class="kanban-column" data-estado="{{ clave }}">

@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from clientes.models import Cliente
@@ -8,6 +9,7 @@ from facturas.models import Factura
 from tickets.models import Ticket
 
 from .models import Actividad, Lead, NotaLead
+from .recordatorios import enviar_recordatorios_vencidos
 
 
 @login_required
@@ -213,3 +215,39 @@ def marcar_actividad_hecha(request, actividad_id):
     actividad.hecha = True
     actividad.save(update_fields=['hecha'])
     return redirect('detalle_lead', lead_id=actividad.lead_id)
+
+
+@login_required
+def crm_dashboard(request):
+    enviar_recordatorios_vencidos()
+
+    hoy = timezone.localdate()
+    leads_activos = Lead.objects.exclude(estado__in=['GANADO', 'PERDIDO'])
+    ganados = Lead.objects.filter(estado='GANADO').count()
+    perdidos = Lead.objects.filter(estado='PERDIDO').count()
+    tasa_conversion = round(ganados / (ganados + perdidos) * 100, 1) if (ganados + perdidos) else 0
+
+    actividades_vencidas = Actividad.objects.filter(
+        hecha=False, fecha__lte=hoy,
+    ).select_related('lead').order_by('fecha')
+    contactos_vencidos = leads_activos.filter(
+        proximo_contacto__lte=hoy,
+    ).order_by('proximo_contacto')
+
+    facturas_autorizadas = Factura.objects.filter(
+        estado='AUTORIZADA',
+    ).select_related('cliente').prefetch_related('items')
+    totales_por_cliente = {}
+    for factura in facturas_autorizadas:
+        totales_por_cliente.setdefault(factura.cliente, 0)
+        totales_por_cliente[factura.cliente] += factura.total
+    top_clientes = sorted(totales_por_cliente.items(), key=lambda kv: kv[1], reverse=True)[:10]
+
+    return render(request, 'crm/dashboard.html', {
+        'leads_activos_count': leads_activos.count(),
+        'leads_activos': leads_activos.order_by('-creado')[:10],
+        'tasa_conversion': tasa_conversion,
+        'actividades_vencidas': actividades_vencidas,
+        'contactos_vencidos': contactos_vencidos,
+        'top_clientes': top_clientes,
+    })

@@ -1,0 +1,144 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CRM — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container">
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">CRM</p>
+                <h1 class="page-title" style="margin:0;">Dashboard</h1>
+            </div>
+            <a href="{% url 'nuevo_lead' %}" class="btn btn-primary">+ Nuevo lead</a>
+        </div>
+
+        {% include "crm/_subnav.html" %}
+
+        <div class="stat-strip" style="margin-bottom:24px;">
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 19.5v-15A2.25 2.25 0 016.75 2.25h10.5A2.25 2.25 0 0119.5 4.5v15"/><path d="M2.25 19.5h19.5"/></svg></div>
+                <div class="stat-value">{{ leads_activos_count }}</div>
+                <div class="stat-label">Leads activos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.25 12.75l4.5 4.5 9-10.5"/></svg></div>
+                <div class="stat-value">{{ tasa_conversion }}%</div>
+                <div class="stat-label">Tasa de conversión</div>
+            </div>
+            <div class="stat-card {% if actividades_vencidas %}is-accent{% endif %}">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v3.75m0 3.75h.008M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                <div class="stat-value">{{ actividades_vencidas|length }}</div>
+                <div class="stat-label">Actividades vencidas</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M3.75 9.75h16.5M8.25 3v3M15.75 3v3"/></svg></div>
+                <div class="stat-value">{{ contactos_vencidos|length }}</div>
+                <div class="stat-label">Contactos vencidos</div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header"><h2>Actividades y contactos vencidos</h2></div>
+            {% if actividades_vencidas or contactos_vencidos %}
+            <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Lead</th>
+                        <th>Qué</th>
+                        <th>Vencido desde</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for actividad in actividades_vencidas %}
+                    <tr>
+                        <td><a href="{% url 'detalle_lead' actividad.lead.id %}">{{ actividad.lead.nombre }}</a></td>
+                        <td>{{ actividad.get_tipo_display }}: {{ actividad.titulo }}</td>
+                        <td class="mono" style="font-size:12.5px;">{{ actividad.fecha|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% for lead in contactos_vencidos %}
+                    <tr>
+                        <td><a href="{% url 'detalle_lead' lead.id %}">{{ lead.nombre }}</a></td>
+                        <td>Próximo contacto pendiente</td>
+                        <td class="mono" style="font-size:12.5px;">{{ lead.proximo_contacto|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>No hay nada vencido. Al día.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header"><h2>Leads activos recientes</h2></div>
+            {% if leads_activos %}
+            <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Lead</th>
+                        <th>Estado</th>
+                        <th>Contacto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in leads_activos %}
+                    <tr>
+                        <td><a href="{% url 'detalle_lead' lead.id %}">{{ lead.nombre }}</a></td>
+                        <td>{{ lead.get_estado_display }}</td>
+                        <td class="mono" style="font-size:12.5px;">{{ lead.telefono|default:lead.email }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>No hay leads activos.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h2>Top clientes por facturación</h2></div>
+            {% if top_clientes %}
+            <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th style="text-align:right;">Total facturado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente, total in top_clientes %}
+                    <tr>
+                        <td><a href="{% url 'ficha_cliente_crm' cliente.id %}">{{ cliente.nombre_completo }}</a></td>
+                        <td class="mono" style="text-align:right;">${{ total|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>Todavía no hay facturas autorizadas.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

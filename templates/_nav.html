@@ -11,7 +11,7 @@
     <nav class="app-nav">
         <a href="{% url 'listado_facturas' %}" {% if request.path|slice:":9" == "/facturas" and request.path != "/facturas/reportes/" %}class="active"{% endif %}>Facturas</a>
         <a href="{% url 'reporte_mensual' %}" {% if request.path == "/facturas/reportes/" %}class="active"{% endif %}>Reportes</a>
-        <a href="{% url 'kanban_leads' %}" {% if "/crm" in request.path and request.resolver_match.url_name != "ficha_cliente_crm" %}class="active"{% endif %}>CRM</a>
+        <a href="{% url 'crm_dashboard' %}" {% if "/crm" in request.path and request.resolver_match.url_name != "ficha_cliente_crm" %}class="active"{% endif %}>CRM</a>
         <a href="{% url 'listado_clientes' %}" {% if "/clientes" in request.path or request.resolver_match.url_name == "ficha_cliente_crm" %}class="active"{% endif %}>Clientes</a>
         <a href="{% url 'listado_servicios' %}" {% if "/servicios" in request.path %}class="active"{% endif %}>Servicios</a>
         <a href="{% url 'listado_tickets' %}" {% if "/tickets" in request.path %}class="active"{% endif %}>Soporte</a>

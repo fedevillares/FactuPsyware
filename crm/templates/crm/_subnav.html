@@ -1,0 +1,4 @@
+<div class="filter-bar" style="margin-bottom:18px;">
+    <a href="{% url 'crm_dashboard' %}" class="btn btn-sm {% if request.resolver_match.url_name == 'crm_dashboard' %}btn-primary{% else %}btn-outline{% endif %}">Dashboard</a>
+    <a href="{% url 'kanban_leads' %}" class="btn btn-sm {% if request.resolver_match.url_name == 'kanban_leads' %}btn-primary{% else %}btn-outline{% endif %}">Pipeline</a>
+</div>
