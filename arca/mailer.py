@@ -15,7 +15,7 @@ TIMEOUT_SMTP_SEGUNDOS = 15
 
 def empresa_tiene_email_configurado(empresa=None):
     empresa = empresa or EmpresaConfig.get_config()
-    return bool(empresa.email_remitente and empresa.email_password)
+    return bool(empresa.email_remitente and empresa.email_password_plano)
 
 
 def conexion_smtp(empresa):

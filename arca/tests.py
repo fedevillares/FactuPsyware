@@ -141,6 +141,62 @@ class EliminarBackupGuardasTests(TestCase):
             self.assertNotContains(respuesta, 'eliminado')
 
 
+class GuardarBackupLocalGuardasTests(TestCase):
+    """Guardar una copia local exige re-autenticación, igual que exportar/importar."""
+
+    def setUp(self):
+        self.password = 'clave-de-test'
+        self.user = User.objects.create_user('tester_guardar', password=self.password)
+        self.client.force_login(self.user)
+        self.url = reverse('guardar_backup_local')
+
+    def test_sin_login_redirige(self):
+        self.client.logout()
+        respuesta = self.client.post(self.url, {})
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertIn('/accounts/login/', respuesta['Location'])
+
+    def test_get_no_permitido(self):
+        respuesta = self.client.get(self.url)
+        self.assertEqual(respuesta.status_code, 405)
+
+    def test_sin_password_rechazado(self):
+        respuesta = self.client.post(self.url, {}, follow=True)
+        self.assertContains(respuesta, 'Contraseña incorrecta')
+
+    def test_password_incorrecta_rechazada(self):
+        respuesta = self.client.post(self.url, {'clave_confirmacion': 'no-es-la-clave'}, follow=True)
+        self.assertContains(respuesta, 'Contraseña incorrecta')
+
+
+class DescargarBackupLocalGuardasTests(TestCase):
+    """Descargar un backup local exige re-autenticación, igual que exportar la DB en vivo."""
+
+    def setUp(self):
+        self.password = 'clave-de-test'
+        self.user = User.objects.create_user('tester_descargar', password=self.password)
+        self.client.force_login(self.user)
+        self.url = reverse('descargar_backup_local')
+
+    def test_sin_login_redirige(self):
+        self.client.logout()
+        respuesta = self.client.post(self.url, {})
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertIn('/accounts/login/', respuesta['Location'])
+
+    def test_get_no_permitido(self):
+        respuesta = self.client.get(self.url, {'nombre': 'backup_x.sqlite3'})
+        self.assertEqual(respuesta.status_code, 405)
+
+    def test_sin_password_rechazado(self):
+        respuesta = self.client.post(self.url, {'nombre': 'backup_x.sqlite3'}, follow=True)
+        self.assertContains(respuesta, 'Contraseña incorrecta')
+
+    def test_password_incorrecta_rechazada(self):
+        respuesta = self.client.post(self.url, {'nombre': 'backup_x.sqlite3', 'clave_confirmacion': 'no-es-la-clave'}, follow=True)
+        self.assertContains(respuesta, 'Contraseña incorrecta')
+
+
 class CifradoPasswordTests(TestCase):
     def test_roundtrip(self):
         self.assertEqual(descifrar(cifrar('mi-clave-secreta')), 'mi-clave-secreta')
@@ -173,6 +229,14 @@ class EmpresaConfigEmailPasswordTests(TestCase):
         empresa.email_password = ''
         empresa.save(update_fields=['email_password'])
         self.assertEqual(empresa.email_password_plano, '')
+
+    def test_no_configurado_si_password_no_descifra(self):
+        from arca.mailer import empresa_tiene_email_configurado
+        empresa = EmpresaConfig.get_config()
+        empresa.email_remitente = 'test@example.com'
+        empresa.email_password = 'esto-no-es-un-token-fernet-valido'
+        empresa.save(update_fields=['email_remitente', 'email_password'])
+        self.assertFalse(empresa_tiene_email_configurado(empresa))
 
 
 class EmpresaConfigFormPasswordTests(TestCase):

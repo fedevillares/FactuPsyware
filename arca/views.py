@@ -113,6 +113,9 @@ def exportar_db(request):
 @require_POST
 def guardar_backup_local(request):
     """Guarda una copia de la DB en la carpeta backups/ del proyecto."""
+    if not _verificar_password(request):
+        return redirect('panel_backup')
+
     if not DB_PATH.exists():
         messages.error(request, 'No se encontró la base de datos.')
         return redirect('panel_backup')
@@ -209,9 +212,13 @@ def eliminar_backup(request):
 
 
 @login_required
+@require_POST
 def descargar_backup_local(request):
     """Descarga un backup guardado localmente."""
-    nombre = request.GET.get('nombre', '').strip()
+    if not _verificar_password(request):
+        return redirect('panel_backup')
+
+    nombre = request.POST.get('nombre', '').strip()
     if not nombre or not nombre.startswith('backup_') or not nombre.endswith('.sqlite3'):
         raise Http404
 
