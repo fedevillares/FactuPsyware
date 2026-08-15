@@ -6,4 +6,5 @@ urlpatterns = [
     path('leads/nuevo/', views.nuevo_lead, name='nuevo_lead'),
     path('leads/<int:lead_id>/', views.detalle_lead, name='detalle_lead'),
     path('leads/<int:lead_id>/nota/', views.agregar_nota_lead, name='agregar_nota_lead'),
+    path('leads/<int:lead_id>/estado/', views.actualizar_estado_lead, name='actualizar_estado_lead'),
 ]

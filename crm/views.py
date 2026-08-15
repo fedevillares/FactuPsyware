@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -56,3 +57,15 @@ def agregar_nota_lead(request, lead_id):
     if texto:
         NotaLead.objects.create(lead=lead, texto=texto)
     return redirect('detalle_lead', lead_id=lead.id)
+
+
+@login_required
+@require_POST
+def actualizar_estado_lead(request, lead_id):
+    lead = get_object_or_404(Lead, id=lead_id)
+    estado = request.POST.get('estado', '').strip()
+    if estado not in dict(Lead.ESTADOS) or estado == 'GANADO':
+        return HttpResponseBadRequest("Estado inválido.")
+    lead.estado = estado
+    lead.save(update_fields=['estado', 'actualizado'])
+    return HttpResponse(status=204)

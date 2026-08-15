@@ -97,3 +97,39 @@ class DetalleLeadViewTests(TestCase):
     def test_agregar_nota_vacia_no_guarda_nada(self):
         self.client.post(reverse('agregar_nota_lead', args=[self.lead.id]), {'texto': '  '})
         self.assertEqual(self.lead.notas.count(), 0)
+
+
+class ActualizarEstadoLeadViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester4', password='pass12345')
+        self.client.force_login(self.user)
+        self.lead = Lead.objects.create(nombre="Pedro Sosa", estado='NUEVO')
+
+    def test_mover_a_contactado(self):
+        response = self.client.post(
+            reverse('actualizar_estado_lead', args=[self.lead.id]), {'estado': 'CONTACTADO'}
+        )
+        self.assertEqual(response.status_code, 204)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.estado, 'CONTACTADO')
+
+    def test_estado_invalido_devuelve_400(self):
+        response = self.client.post(
+            reverse('actualizar_estado_lead', args=[self.lead.id]), {'estado': 'NO_EXISTE'}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.estado, 'NUEVO')
+
+    def test_no_permite_mover_directo_a_ganado(self):
+        """GANADO solo se alcanza vía convertir_lead (Task 5), no arrastrando la tarjeta."""
+        response = self.client.post(
+            reverse('actualizar_estado_lead', args=[self.lead.id]), {'estado': 'GANADO'}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.lead.refresh_from_db()
+        self.assertEqual(self.lead.estado, 'NUEVO')
+
+    def test_get_no_permitido(self):
+        response = self.client.get(reverse('actualizar_estado_lead', args=[self.lead.id]))
+        self.assertEqual(response.status_code, 405)
