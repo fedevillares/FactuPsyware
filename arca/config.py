@@ -36,22 +36,24 @@ def datos_entorno(entorno):
     }
 
 
-# Cambiar a 'produccion' cuando se quiera facturar en serio contra AFIP real.
-# En 'homologacion' se usa el ambiente de testing de AFIP (datos no fiscales).
-ENTORNO = os.environ.get('ARCA_ENTORNO', 'homologacion')  # 'homologacion' | 'produccion'
-
-_datos = datos_entorno(ENTORNO)
-CERT_PATH = _datos['cert_path']
-KEY_PATH = _datos['key_path']
-WSAA_URL = _datos['wsaa_url']
-WSFE_URL = _datos['wsfe_url']
+# El entorno ('homologacion' o 'produccion') ya no es fijo para todo el
+# proceso: se elige por factura al emitir (ver facturas/views.py:emitir y
+# arca/services.py:emitir_factura). Usar siempre datos_entorno(entorno)
+# para obtener cert/clave/URLs de un entorno puntual.
 
 
 class _AfipSSLAdapter(HTTPAdapter):
     """Adaptador HTTPS que permite cifrados/DH viejos, requeridos por los
     servidores de AFIP (rechazados por defecto en OpenSSL 3.x con el error
     'DH_KEY_TOO_SMALL'). Solo se usa para conectar a AFIP, no afecta al
-    resto del sistema."""
+    resto del sistema.
+
+    NOTA DE SEGURIDAD (revisado 2026-08-15): esto baja el nivel de
+    ciphers/DH aceptados (SECLEVEL=1), pero la verificacion de certificado
+    del servidor de AFIP sigue activa (ssl.create_default_context(), sin
+    check_hostname=False ni verify=False en ningun lado). Es un downgrade
+    acotado y necesario para interoperar con los servidores de AFIP, no un
+    descuido -- revisar si AFIP actualiza su infraestructura TLS."""
 
     def init_poolmanager(self, *args, **kwargs):
         ctx = ssl.create_default_context()
@@ -73,5 +75,8 @@ def get_zeep_client(wsdl_url):
     AFIP (wsaa.py, wsfe.py, diagnostico.py)."""
     session = requests.Session()
     session.mount('https://', _AfipSSLAdapter())
-    transport = Transport(session=session)
+    # Timeout explícito: sin esto, una conexión colgada a AFIP bloquea el
+    # request indefinidamente (causa típica de "se cuelga", ver
+    # "0 - Si algo se cuelga, ejecutar esto.bat").
+    transport = Transport(session=session, timeout=20, operation_timeout=30)
     return zeep.Client(wsdl=wsdl_url + '?WSDL', transport=transport)

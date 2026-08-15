@@ -167,14 +167,18 @@ LOGGING = {
     },
     'handlers': {
         'arca_file': {
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': LOG_DIR / 'arca_emisiones.log',
             'formatter': 'verbose',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 5,
         },
         'django_file': {
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': LOG_DIR / 'django_errors.log',
             'formatter': 'verbose',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 5,
         },
     },
     'loggers': {
