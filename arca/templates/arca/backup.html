@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Backup y restauración</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:800px;">
+        <a href="{% url 'panel_verificacion' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">&larr; Volver a verificación</a>
+
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Administración</p>
+                <h1 class="page-title" style="margin:0;">Backup y restauración</h1>
+            </div>
+        </div>
+
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="alert {% if msg.tags == 'success' %}alert-success{% else %}alert-danger{% endif %}" style="margin-bottom:16px;">
+            {{ msg }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- Exportar DB -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h2 style="margin:0; font-size:16px; display:flex; align-items:center; gap:8px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg> Exportar base de datos</h2>
+            </div>
+            <div class="card-body">
+                <p style="margin:0 0 16px; color:var(--text-muted); font-size:14px;">
+                    Descargá la base de datos completa (clientes, facturas, servicios y configuración)
+                    como un archivo <code>.sqlite3</code>. Guardalo en un lugar seguro como respaldo.
+                </p>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <form method="post" action="{% url 'exportar_db' %}" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+                        {% csrf_token %}
+                        <div class="field" style="margin:0;">
+                            <label for="clave_confirmacion_export">Confirmá tu contraseña</label>
+                            <input type="password" id="clave_confirmacion_export" name="clave_confirmacion" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="btn btn-primary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg> Descargar backup ahora</button>
+                    </form>
+                    <form method="post" action="{% url 'guardar_backup_local' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 21H4.5A1.5 1.5 0 013 19.5v-15A1.5 1.5 0 014.5 3h11.379a1.5 1.5 0 011.06.44l3.622 3.621a1.5 1.5 0 01.439 1.061V19.5a1.5 1.5 0 01-1.5 1.5z"/><path d="M7.5 3v5.25h7.5V3M7.5 21v-6.75h9V21"/></svg> Guardar copia local (en carpeta backups/)</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Importar DB -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h2 style="margin:0; font-size:16px; display:flex; align-items:center; gap:8px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 7.5L12 3m0 0l4.5 4.5M12 3v13.5"/></svg> Restaurar base de datos</h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger" style="margin-bottom:16px;">
+                    <strong>Atención:</strong> Restaurar reemplaza <em>todos</em> los datos actuales
+                    con los del archivo elegido. Se guarda un backup automático de la DB actual antes
+                    de reemplazarla. Después de restaurar, reiniciá el servidor.
+                </div>
+                <form method="post" action="{% url 'importar_db' %}" enctype="multipart/form-data"
+                      onsubmit="return confirm('¿Seguro querés restaurar? Esto reemplaza toda la base de datos actual. Se guardará un backup automático antes de hacerlo.')">
+                    {% csrf_token %}
+                    <div class="field" style="max-width:420px;">
+                        <label for="archivo_db">Archivo de backup (.sqlite3)</label>
+                        <input type="file" id="archivo_db" name="archivo_db" accept=".sqlite3" required class="filter-search" style="cursor:pointer;">
+                    </div>
+                    <div class="field" style="max-width:420px; margin-top:12px;">
+                        <label for="confirmacion">Escribí RESTAURAR para confirmar</label>
+                        <input type="text" id="confirmacion" name="confirmacion" placeholder="RESTAURAR" required class="filter-search" autocomplete="off">
+                    </div>
+                    <div class="field" style="max-width:420px; margin-top:12px;">
+                        <label for="clave_confirmacion_import">Confirmá tu contraseña</label>
+                        <input type="password" id="clave_confirmacion_import" name="clave_confirmacion" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn btn-outline" style="color:var(--danger); border-color:var(--danger); margin-top:8px;">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 7.5L12 3m0 0l4.5 4.5M12 3v13.5"/></svg> Restaurar desde archivo
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Backups locales guardados -->
+        <div class="card">
+            <div class="card-header">
+                <h2 style="margin:0; font-size:16px; display:flex; align-items:center; gap:8px;"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.75 7.5h5.379a1.5 1.5 0 011.06.44l1.122 1.12a1.5 1.5 0 001.06.44H20.25a1.5 1.5 0 011.5 1.5v8.25a1.5 1.5 0 01-1.5 1.5H3.75a1.5 1.5 0 01-1.5-1.5V9a1.5 1.5 0 011.5-1.5z"/></svg> Copias locales guardadas</h2>
+            </div>
+            {% if backups %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Archivo</th>
+                        <th>Fecha</th>
+                        <th>Tamaño</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in backups %}
+                    <tr>
+                        <td class="mono" style="font-size:13px;">{{ b.nombre }}</td>
+                        <td>{{ b.fecha|date:"d/m/Y H:i" }}</td>
+                        <td class="num">{{ b.size_kb }} KB</td>
+                        <td style="white-space:nowrap;"><div class="col-acciones">
+                            <a href="{% url 'descargar_backup_local' %}?nombre={{ b.nombre }}" class="btn btn-outline btn-sm"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg> Descargar</a>
+                            <form method="post" action="{% url 'eliminar_backup' %}"
+                                  onsubmit="return confirm('¿Eliminar el backup {{ b.nombre }}? Esta acción no se puede deshacer.')">
+                                {% csrf_token %}
+                                <input type="hidden" name="nombre" value="{{ b.nombre }}">
+                                <button type="submit" class="btn btn-outline btn-sm" style="color:var(--danger); border-color:var(--danger);">Eliminar</button>
+                            </form>
+                        </div></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 21H4.5A1.5 1.5 0 013 19.5v-15A1.5 1.5 0 014.5 3h11.379a1.5 1.5 0 011.06.44l3.622 3.621a1.5 1.5 0 01.439 1.061V19.5a1.5 1.5 0 01-1.5 1.5z"/><path d="M7.5 3v5.25h7.5V3M7.5 21v-6.75h9V21"/></svg></div>
+                <p>No hay copias locales guardadas todavía.</p>
+                <p style="font-size:13px; margin-top:-8px;">Usá "Guardar copia local" para crear una.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

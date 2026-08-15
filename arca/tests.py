@@ -25,10 +25,11 @@ def archivo_sqlite_falso(nombre='backup_test.sqlite3', contenido=b'SQLite format
 
 
 class ImportarDbGuardasTests(TestCase):
-    """La restauración de la base exige confirmación explícita del servidor."""
+    """La restauración de la base exige re-autenticación y confirmación explícita del servidor."""
 
     def setUp(self):
-        self.user = User.objects.create_user('tester', password='clave-de-test')
+        self.password = 'clave-de-test'
+        self.user = User.objects.create_user('tester', password=self.password)
         self.client.force_login(self.user)
         self.url = reverse('importar_db')
 
@@ -42,9 +43,25 @@ class ImportarDbGuardasTests(TestCase):
         respuesta = self.client.get(self.url)
         self.assertEqual(respuesta.status_code, 405)
 
+    def test_sin_password_rechazado(self):
+        respuesta = self.client.post(self.url, {
+            'archivo_db': archivo_sqlite_falso(),
+            'confirmacion': 'RESTAURAR',
+        }, follow=True)
+        self.assertContains(respuesta, 'Contraseña incorrecta')
+
+    def test_password_incorrecta_rechazada(self):
+        respuesta = self.client.post(self.url, {
+            'archivo_db': archivo_sqlite_falso(),
+            'confirmacion': 'RESTAURAR',
+            'clave_confirmacion': 'no-es-la-clave',
+        }, follow=True)
+        self.assertContains(respuesta, 'Contraseña incorrecta')
+
     def test_sin_confirmacion_rechazado(self):
         respuesta = self.client.post(self.url, {
             'archivo_db': archivo_sqlite_falso(),
+            'clave_confirmacion': self.password,
         }, follow=True)
         self.assertContains(respuesta, 'RESTAURAR')
 
@@ -52,6 +69,7 @@ class ImportarDbGuardasTests(TestCase):
         respuesta = self.client.post(self.url, {
             'archivo_db': archivo_sqlite_falso(),
             'confirmacion': 'restaurar ya',
+            'clave_confirmacion': self.password,
         }, follow=True)
         self.assertContains(respuesta, 'RESTAURAR')
 
@@ -59,6 +77,7 @@ class ImportarDbGuardasTests(TestCase):
         respuesta = self.client.post(self.url, {
             'archivo_db': archivo_sqlite_falso(nombre='cualquiercosa.txt'),
             'confirmacion': 'RESTAURAR',
+            'clave_confirmacion': self.password,
         }, follow=True)
         self.assertContains(respuesta, '.sqlite3')
 
@@ -66,8 +85,45 @@ class ImportarDbGuardasTests(TestCase):
         respuesta = self.client.post(self.url, {
             'archivo_db': archivo_sqlite_falso(contenido=b'no soy una base de datos'),
             'confirmacion': 'RESTAURAR',
+            'clave_confirmacion': self.password,
         }, follow=True)
         self.assertContains(respuesta, 'no es una base de datos SQLite')
+
+
+class ExportarDbGuardasTests(TestCase):
+    """La descarga de la base exige re-autenticación."""
+
+    def setUp(self):
+        self.password = 'clave-de-test'
+        self.user = User.objects.create_user('tester2', password=self.password)
+        self.client.force_login(self.user)
+        self.url = reverse('exportar_db')
+
+    def test_sin_login_redirige(self):
+        self.client.logout()
+        respuesta = self.client.post(self.url, {})
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertIn('/accounts/login/', respuesta['Location'])
+
+    def test_get_no_permitido(self):
+        respuesta = self.client.get(self.url)
+        self.assertEqual(respuesta.status_code, 405)
+
+    def test_sin_password_rechazado(self):
+        respuesta = self.client.post(self.url, {}, follow=True)
+        self.assertContains(respuesta, 'Contraseña incorrecta')
+
+    def test_password_incorrecta_rechazada(self):
+        respuesta = self.client.post(self.url, {'clave_confirmacion': 'no-es-la-clave'}, follow=True)
+        self.assertContains(respuesta, 'Contraseña incorrecta')
+
+    def test_password_correcta_descarga(self):
+        from django.conf import settings
+        if not (settings.BASE_DIR / 'db.sqlite3').exists():
+            self.skipTest('No hay db.sqlite3 en este entorno de test.')
+        respuesta = self.client.post(self.url, {'clave_confirmacion': self.password})
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertEqual(respuesta['Content-Type'], 'application/x-sqlite3')
 
 
 class EliminarBackupGuardasTests(TestCase):
