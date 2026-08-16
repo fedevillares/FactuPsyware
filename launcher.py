@@ -208,17 +208,37 @@ def asegurar_permisos_restringidos(ruta):
     """Restringe una carpeta o archivo sensible (claves privadas de AFIP,
     SECRET_KEY, db.sqlite3) a solo el usuario actual, usando ACLs reales de
     Windows -- os.chmod no tiene efecto en NTFS. No es fatal si falla (por
-    ejemplo, en una unidad de red que no soporte ACLs)."""
+    ejemplo, en una unidad de red que no soporte ACLs).
+
+    Para una carpeta hacen falta DOS pasadas de icacls, no una: los flags
+    de herencia (OI)(CI) solo son validos en el permiso de un contenedor
+    (para que los archivos NUEVOS los hereden). Si se aplican con /T a los
+    archivos YA existentes dentro de la carpeta -- como hacia la version
+    anterior, todo en un solo comando -- icacls genera una ACE invalida en
+    cada archivo y el resultado es una ACL VACIA: sin ningun permiso, ni
+    siquiera para el dueno. Eso rompio certificados/ en produccion (todos
+    los .crt/.key/.json quedaron con "Permission denied"). Por eso: una
+    pasada para la carpeta (con herencia, sin /T) y otra para el contenido
+    existente (con /T, sin los flags de contenedor)."""
     if not ruta.exists():
         return
     usuario = os.environ.get("USERNAME", "")
     if not usuario:
         return
     if ruta.is_dir():
-        args = ["icacls", str(ruta), "/inheritance:r", "/grant:r", f"{usuario}:(OI)(CI)F", "/T"]
+        subprocess.run(
+            ["icacls", str(ruta), "/inheritance:r", "/grant:r", f"{usuario}:(OI)(CI)F"],
+            capture_output=True,
+        )
+        subprocess.run(
+            ["icacls", str(ruta), "/grant:r", f"{usuario}:F", "/T"],
+            capture_output=True,
+        )
     else:
-        args = ["icacls", str(ruta), "/inheritance:r", "/grant:r", f"{usuario}:F"]
-    subprocess.run(args, capture_output=True)
+        subprocess.run(
+            ["icacls", str(ruta), "/inheritance:r", "/grant:r", f"{usuario}:F"],
+            capture_output=True,
+        )
 
 
 def advertir_si_carpeta_sincronizada():
