@@ -140,6 +140,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/facturas/'
+# Sin esto, el logout del panel de admin (que usa su propia vista
+# admin:logout) cae en la pantalla "logged out" del admin con un link al
+# login feo de Django en vez de volver a registration/login.html.
+LOGOUT_REDIRECT_URL = 'login'
 
 # Sesión: expira al cerrar el navegador; cookie solo por HTTP (no accesible desde JS)
 SESSION_COOKIE_HTTPONLY = True

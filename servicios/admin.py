@@ -31,6 +31,10 @@ aplicar_aumento.short_description = 'Aplicar %% de aumento por inflacion a los s
 @admin.register(Servicio)
 class ServicioAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'precio_unitario', 'alicuota_iva', 'precio_con_iva', 'activo')
+    list_display_links = ('nombre',)
     search_fields = ('nombre',)
     list_filter = ('activo', 'alicuota_iva')
+    list_editable = ('precio_unitario', 'activo')
+    ordering = ('nombre',)
+    list_per_page = 50
     actions = [aplicar_aumento]

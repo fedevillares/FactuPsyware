@@ -3,13 +3,20 @@
 {% load i18n %}
 
 {% block branding %}
-<div id="site-name">
-    <a href="{% url 'admin:index' %}" style="display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none;">
-        <img src="{% static 'img/logo.png' %}" style="height: 32px;">
-        <span style="font-weight:600; font-size:15px;">Panel de Gestión</span>
+<div id="site-name" style="display:flex; align-items:center; gap:16px;">
+    <a href="{% url 'admin:index' %}" style="display:flex; align-items:center; gap:10px; text-decoration:none;">
+        {% if empresa_config.logo %}
+        <img src="{{ empresa_config.logo.url }}" style="height:26px; display:block;">
+        {% else %}
+        <img src="{% static 'img/logo.png' %}" style="height:26px; display:block;">
+        {% endif %}
+        <span style="font-family:var(--font-display); font-weight:600; font-size:16px; color:var(--text); letter-spacing:-0.01em;">FactuPsyware</span>
     </a>
+    <a href="/facturas/" class="btn-header-primary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.75h7.5L19 8.25V19.5a.75.75 0 01-.75.75H7a.75.75 0 01-.75-.75V4.5A.75.75 0 017 3.75z"/><path d="M14.5 3.75V8.25H19M9 13h6M9 16.25h6"/></svg> Ir a Facturación</a>
 </div>
 {% endblock %}
+
+{% block nav-global %}{% endblock %}
 
 {% block extrahead %}
 {{ block.super }}
@@ -20,152 +27,827 @@
 {% block extrastyle %}
 {{ block.super }}
 <style>
-    :root {
-        --primary: #2563eb;
-        --secondary: #6b7785;
-        --primary-fg: #fff;
-        --header-color: var(--text);
-        --header-branding-color: var(--text);
-        --header-bg: var(--bg-header);
-        --header-link-color: var(--text);
-        --breadcrumbs-fg: var(--text-muted);
-        --breadcrumbs-bg: var(--bg-header);
-        --link-fg: #2563eb;
-        --link-hover-color: #1d4ed8;
-        --link-selected-fg: #2563eb;
-        --object-tools-bg: #2563eb;
-        --object-tools-hover-bg: #1d4ed8;
-    }
+/* ══════════════════════════════════════════
+   BASE — variables Django → nuestras vars
+   ══════════════════════════════════════════ */
+html:root {
+    /* "html:root" (no solo "html"): el propio admin de Django define estas
+       mismas variables dentro de "@media (prefers-color-scheme: dark) { :root {...} }"
+       en dark_mode.css. ":root" tiene más especificidad CSS que "html" solo,
+       así que si el sistema operativo tiene tema oscuro activo, Django le
+       ganaba a este bloque y quedaban colores mezclados claro/oscuro. */
+    --primary: #2B4734;
+    --secondary: #8C8470;
+    --primary-fg: #F7F9F4;
+    --header-color: #21241F;
+    --header-branding-color: #21241F;
+    --header-bg: #FFFFFF;
+    --header-link-color: #55584A;
+    --body-fg: #21241F;
+    --body-bg: #FAF8F3;
+    --body-quiet-color: #55584A;
+    --body-loud-color: #21241F;
+    --link-fg: #2B4734;
+    --link-hover-color: #1D3324;
+    --link-selected-fg: #2B4734;
+    --hairline-color: #E6E1D2;
+    --border-color: #CFC9B4;
+    --error-fg: #8A3324;
+    --message-success-bg: #E7ECE0;
+    --message-warning-bg: #EFEAD9;
+    --message-error-bg: #F3E3DA;
+    --darkened-bg: #F1EDE3;
+    --selected-bg: #E7ECE0;
+    --selected-row: #F6F2E9;
+    --button-fg: #F7F9F4;
+    --button-bg: #2B4734;
+    --button-hover-bg: #1D3324;
+    --default-button-bg: #2B4734;
+    --close-button-bg: #8C8470;
+    --delete-button-bg: #8A3324;
+    --object-tools-bg: #2B4734;
+    --object-tools-hover-bg: #1D3324;
+    --font-family-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-family-monospace: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
 
-    *, input, select, textarea, button, table, th, td {
-        font-family: 'Inter', system-ui, sans-serif !important;
-    }
+html[data-theme="dark"]:root {
+    --primary: #8FB89C;
+    --primary-fg: #12160F;
+    --header-color: #ECE9DE;
+    --header-branding-color: #ECE9DE;
+    --header-bg: #14160F;
+    --header-link-color: #ADAD96;
+    --body-fg: #ECE9DE;
+    --body-bg: #14160F;
+    --body-quiet-color: #ADAD96;
+    --body-loud-color: #ECE9DE;
+    --link-fg: #8FB89C;
+    --link-hover-color: #B0D1BB;
+    --link-selected-fg: #8FB89C;
+    --hairline-color: #2E3226;
+    --border-color: #3D4233;
+    --error-fg: #DD9C84;
+    --message-success-bg: #1F2A21;
+    --message-warning-bg: #232518;
+    --message-error-bg: #2E2018;
+    --darkened-bg: #21241A;
+    --selected-bg: #1F2A21;
+    --selected-row: #23271B;
+    --button-fg: #12160F;
+    --button-bg: #8FB89C;
+    --button-hover-bg: #B0D1BB;
+    --default-button-bg: #8FB89C;
+    --object-tools-bg: #8FB89C;
+    --object-tools-hover-bg: #B0D1BB;
+    --close-button-bg: #767259;
+    --delete-button-bg: #DD9C84;
+}
 
-    body { background: var(--bg) !important; color: var(--text) !important; }
+/* ══════════════════════════════════════════
+   FUENTES GLOBALES
+   ══════════════════════════════════════════ */
+* { box-sizing: border-box; }
+body, input, select, textarea, button, table, th, td {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+}
+body {
+    background: var(--body-bg) !important;
+    color: var(--body-fg) !important;
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+    -webkit-font-smoothing: antialiased;
+}
 
-    #header {
-        background: var(--bg-header) !important;
-        color: var(--text) !important;
-        border-bottom: 1px solid var(--border);
-    }
-    #header a:link, #header a:visited { color: var(--text) !important; }
-    #site-name a { color: var(--text) !important; }
+/* ══════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════ */
+#header {
+    background: var(--header-bg) !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+    padding: 13px 24px !important;
+    box-shadow: 0 1px 3px rgba(33,36,31,.06) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+}
+#header a:link, #header a:visited { color: var(--header-link-color) !important; text-decoration: none !important; }
+#header a:hover { color: var(--body-loud-color) !important; }
+#site-name a:link, #site-name a:visited, #site-name a:hover, #site-name a span {
+    color: var(--header-color) !important;
+}
 
-    #content, .module, #changelist, .dashboard .module table, .results, .paginator,
-    .form-row, fieldset.module, .object-tools, #toolbar,
-    #content-related, #content-related .module, #recent-actions-module {
-        background: var(--bg-card) !important;
-        color: var(--text) !important;
-        border-color: var(--border) !important;
-    }
+/* Botón primario del header */
+.btn-header-primary,
+#header a.btn-header-primary:link,
+#header a.btn-header-primary:visited {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    background: var(--button-bg) !important;
+    color: var(--button-fg) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 7px 14px !important;
+    border-radius: 8px !important;
+    text-decoration: none !important;
+    transition: background .15s !important;
+    border: none !important;
+}
+#header a.btn-header-primary:hover, .btn-header-primary:hover {
+    background: var(--button-hover-bg) !important;
+    color: var(--button-fg) !important;
+}
 
-    #content .module h2,
-    #content .module caption,
-    #content-main .module h2,
-    .dashboard .module h2,
-    .dashboard .module caption,
-    .inline-group h2,
-    #recent-actions-module h2,
-    #recent-actions-module h3 {
-        background: #2563eb !important;
-        color: #ffffff !important;
-    }
-    #content .module h2 a,
-    #content .module caption a,
-    #content-main .module h2 a,
-    .dashboard .module h2 a,
-    .dashboard .module caption a,
-    .inline-group h2 a,
-    #recent-actions-module h2 a,
-    #recent-actions-module h3 a {
-        color: #ffffff !important;
-    }
+/* ══════════════════════════════════════════
+   USER TOOLS
+   ══════════════════════════════════════════ */
+#user-tools {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    color: var(--body-quiet-color) !important;
+    font-size: 13px !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    padding: 0 !important;
+}
+.user-tools-links { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tool-link,
+#logout-form button.tool-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--darkened-bg);
+    color: var(--body-quiet-color) !important;
+    font-size: 12.5px !important;
+    font-weight: 500;
+    text-decoration: none !important;
+    cursor: pointer;
+    transition: border-color .12s, background .12s, color .12s;
+    line-height: 1.4;
+    font-family: inherit;
+}
+.tool-link:hover { border-color: var(--border-color); background: var(--selected-row); color: var(--body-loud-color) !important; }
+.tool-link-primary,
+#header a.tool-link-primary:link,
+#header a.tool-link-primary:visited {
+    background: var(--button-bg) !important; border-color: var(--button-bg) !important;
+    color: var(--button-fg) !important; font-weight: 600 !important;
+}
+#header a.tool-link-primary:hover, .tool-link-primary:hover {
+    background: var(--button-hover-bg) !important; border-color: var(--button-hover-bg) !important; color: var(--button-fg) !important;
+}
+#logout-form { display: inline; }
+#logout-form button { background: none; border: none; cursor: pointer; padding: 0; font-family: inherit; color: inherit; font-size: inherit; }
+.theme-toggle-admin {
+    cursor: pointer; background: var(--darkened-bg); border: 1px solid var(--border-color);
+    color: var(--body-quiet-color); border-radius: 6px; width: 30px; height: 30px;
+    font-size: 14px; display: inline-flex; align-items: center; justify-content: center;
+    transition: border-color .12s, background .12s;
+}
+.theme-toggle-admin:hover { border-color: var(--border-color); background: var(--selected-row); }
 
-    #content a, #content-related a, #recent-actions-module a,
-    .dashboard a, #changelist a {
-        color: #2563eb !important;
-    }
-    #content a:hover, #content-related a:hover, #recent-actions-module a:hover {
-        color: #1d4ed8 !important;
-    }
+/* ══════════════════════════════════════════
+   BREADCRUMBS
+   ══════════════════════════════════════════ */
+div.breadcrumbs {
+    background: var(--body-bg) !important;
+    color: var(--body-quiet-color) !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+    font-size: 12px !important;
+    padding: 9px 24px !important;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+}
+div.breadcrumbs a { color: var(--link-fg) !important; }
+div.breadcrumbs a:hover { color: var(--link-hover-color) !important; }
 
-    div.breadcrumbs {
-        background: var(--bg-header) !important;
-        color: var(--text-muted) !important;
-        border-bottom: 1px solid var(--border);
-    }
-    div.breadcrumbs a { color: #2563eb !important; }
+/* ══════════════════════════════════════════
+   MÓDULOS / CARDS
+   ══════════════════════════════════════════ */
+.module {
+    border: 1px solid var(--hairline-color) !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 3px rgba(33,36,31,.05) !important;
+    margin-bottom: 22px !important;
+    background: var(--header-bg) !important;
+}
+.module h2, .module caption,
+.inline-group h2,
+#recent-actions-module h2, #recent-actions-module h3,
+#nav-sidebar .module caption {
+    background: var(--darkened-bg) !important;
+    color: var(--body-loud-color) !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+    font-family: var(--font-display) !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    padding: 11px 18px !important;
+}
+.module h2 a, .module caption a,
+#recent-actions-module h2 a, #recent-actions-module h3 a {
+    color: var(--body-loud-color) !important;
+}
+fieldset legend, fieldset .fieldset-heading, .collapse summary {
+    background: var(--darkened-bg) !important;
+    color: var(--body-loud-color) !important;
+    border: none !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+    font-family: var(--font-display) !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    padding: 10px 16px !important;
+    display: block; width: 100%;
+}
 
-    .button, input[type=submit], input[type=button], .submit-row input, a.button {
-        background: #2563eb !important;
-        border-radius: 6px;
-        border: none !important;
-        color: #fff !important;
-    }
-    .button:hover, input[type=submit]:hover { background: #1d4ed8 !important; }
+/* ══════════════════════════════════════════
+   FORMULARIOS
+   ══════════════════════════════════════════ */
+.form-row {
+    padding: 13px 18px !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+    background: var(--header-bg) !important;
+}
+fieldset.module .form-row:last-child { border-bottom: none !important; }
+.form-row label {
+    color: var(--body-quiet-color) !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+.form-row .help, p.help, .help {
+    color: var(--body-quiet-color) !important;
+    font-size: 12.5px !important; margin-top: 5px !important; line-height: 1.5 !important; opacity: .8;
+}
+fieldset .description { padding: 10px 16px !important; color: var(--body-quiet-color) !important; font-size: 13px !important; }
 
-    input, select, textarea {
-        background: var(--bg-card) !important;
-        color: var(--text) !important;
-        border: 1px solid var(--border) !important;
-    }
+input[type="text"], input[type="password"], input[type="number"],
+input[type="email"], input[type="url"], input[type="date"],
+input[type="datetime-local"], select, textarea {
+    background: var(--header-bg) !important;
+    color: var(--body-fg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 8px 11px !important;
+    font-size: 14px !important;
+    transition: border-color .12s, box-shadow .12s !important;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(43,71,52,.14) !important;
+    outline: none !important;
+}
+input::placeholder, textarea::placeholder { color: var(--body-quiet-color) !important; opacity: .6; }
+input:-webkit-autofill, input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--body-fg) !important;
+    box-shadow: 0 0 0 1000px var(--header-bg) inset !important;
+}
+input[type="checkbox"], input[type="radio"] {
+    accent-color: var(--primary) !important; width: 15px !important; height: 15px !important;
+}
 
-    table thead th { background: var(--bg) !important; color: var(--text-muted) !important; }
+/* ══════════════════════════════════════════
+   BOTONES GENERALES
+   ══════════════════════════════════════════ */
+.button, a.button {
+    background: var(--button-bg) !important;
+    color: var(--button-fg) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    font-size: 13.5px !important;
+    padding: 8px 16px !important;
+    cursor: pointer !important;
+    transition: background .12s !important;
+    line-height: 1.4 !important;
+    text-decoration: none !important;
+}
+.button:hover, a.button:hover { background: var(--button-hover-bg) !important; }
+.button.default { background: var(--button-bg) !important; }
 
-    .theme-toggle-admin {
-        cursor: pointer;
-        background: transparent;
-        border: 1px solid var(--border);
-        color: var(--text);
-        border-radius: 6px;
-        width: 32px;
-        height: 32px;
-        font-size: 14px;
-        margin-left: 10px;
-    }
+/* submit inputs — NO usar inline-flex para no romper el layout
+   de la barra de acciones del changelist */
+input[type="submit"], input[type="button"] {
+    background: var(--button-bg) !important;
+    color: var(--button-fg) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    font-size: 13.5px !important;
+    padding: 8px 16px !important;
+    cursor: pointer !important;
+    transition: background .12s !important;
+}
+input[type="submit"]:hover, input[type="button"]:hover { background: var(--button-hover-bg) !important; }
 
-    #logout-form {
-        display: inline;
-    }
-    #logout-form button {
-        background: none;
-        border: none;
-        color: #2563eb;
-        cursor: pointer;
-        font-size: inherit;
-        padding: 0;
-        text-decoration: underline;
-        font-family: inherit;
-    }
+/* ══════════════════════════════════════════
+   BARRA DE ACCIONES DEL CHANGELIST
+   FIX: el botón "Ejecutar" quedaba superpuesto porque Django usa
+   vertical-align + line-height y nuestro display:inline-flex global
+   lo sacaba del flujo. Se resetea a inline-block y se ajusta el layout.
+   ══════════════════════════════════════════ */
+#changelist .actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    padding: 10px 16px !important;
+    background: var(--darkened-bg) !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+}
+#changelist .actions label {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--body-quiet-color) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+    display: inline !important;
+}
+#changelist .actions select {
+    height: auto !important;
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+    min-width: 160px !important;
+    flex: 1 !important;
+    max-width: 300px !important;
+    vertical-align: baseline !important;
+    margin: 0 !important;
+}
+/* El botón "Ejecutar" dentro de .actions usa la clase .button
+   pero necesita ser inline-block, no inline-flex, para alinearse */
+#changelist .actions .button,
+#changelist .actions button,
+#changelist .actions input[type="submit"] {
+    display: inline-block !important;
+    padding: 6px 14px !important;
+    font-size: 13px !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+    vertical-align: baseline !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    box-shadow: none !important;
+    background: var(--button-bg) !important;
+    color: var(--button-fg) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
+#changelist .actions .button:hover { background: var(--button-hover-bg) !important; }
+#changelist .actions span.all,
+#changelist .actions span.action-counter,
+#changelist .actions span.clear,
+#changelist .actions span.question {
+    font-size: 12px !important;
+    color: var(--body-quiet-color) !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+}
+
+/* ══════════════════════════════════════════
+   SUBMIT-ROW (guardar/eliminar al pie del form)
+   ══════════════════════════════════════════ */
+.submit-row {
+    position: static !important;
+    background: var(--darkened-bg) !important;
+    border-top: 1px solid var(--hairline-color) !important;
+    border-radius: 0 0 10px 10px !important;
+    padding: 13px 18px !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+}
+.submit-row input { margin: 0 !important; }
+.submit-row p { margin: 0 !important; }
+.deletelink, a.deletelink {
+    background: transparent !important;
+    color: var(--error-fg) !important;
+    border: 1px solid color-mix(in srgb, var(--error-fg) 35%, transparent) !important;
+    border-radius: 6px !important;
+    padding: 7px 14px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+}
+.deletelink:hover, a.deletelink:hover {
+    background: var(--error-fg) !important; color: #fff !important;
+}
+
+/* Object tools */
+.object-tools a.addlink, .object-tools a { border-radius: 6px !important; font-size: 13px !important; }
+#content .object-tools a:link, #content .object-tools a:visited,
+#toolbar .object-tools a:link, #toolbar .object-tools a:visited { color: var(--button-fg) !important; }
+
+/* ══════════════════════════════════════════
+   TABLAS
+   ══════════════════════════════════════════ */
+table { border-collapse: collapse !important; width: 100% !important; }
+th, td { padding: 10px 15px !important; border-bottom: 1px solid var(--hairline-color) !important; }
+thead th {
+    background: var(--darkened-bg) !important;
+    color: var(--body-quiet-color) !important;
+    font-size: 11.5px !important; font-weight: 600 !important;
+    text-transform: uppercase !important; letter-spacing: 0.05em !important;
+}
+tbody tr:hover { background: var(--selected-row) !important; }
+tbody tr:last-child td { border-bottom: none !important; }
+#changelist table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--darkened-bg) 40%, transparent) !important; }
+#changelist table tbody tr:nth-child(even):hover { background: var(--selected-row) !important; }
+.module table td, .module table th { border-color: var(--hairline-color) !important; }
+
+/* Dashboard: th de lista de modelos */
+.dashboard .module table th {
+    font-family: var(--font-display) !important;
+    text-transform: none !important; letter-spacing: normal !important;
+    color: var(--body-loud-color) !important; font-size: 13.5px !important;
+    font-weight: 600 !important; background: transparent !important;
+}
+.dashboard .module table td, .dashboard .module table th { padding: 9px 16px !important; }
+#changelist table thead th, #content-main .module th { background: var(--darkened-bg) !important; }
+
+/* ══════════════════════════════════════════
+   LINKS
+   ══════════════════════════════════════════ */
+#content a, #content-related a, #recent-actions-module a, .dashboard a, #changelist a {
+    color: var(--link-fg) !important;
+}
+#content a:hover, #content-related a:hover, #recent-actions-module a:hover { color: var(--link-hover-color) !important; }
+#content .object-tools a:link, #content .object-tools a:visited,
+#toolbar .object-tools a:link, #toolbar .object-tools a:visited { color: var(--button-fg) !important; }
+
+/* ══════════════════════════════════════════
+   MENSAJES
+   ══════════════════════════════════════════ */
+ul.messagelist { padding: 0 24px !important; margin: 12px 0 !important; list-style: none !important; }
+ul.messagelist li {
+    padding: 11px 16px !important; border-radius: 8px !important;
+    font-size: 13.5px !important; border: 1px solid transparent !important;
+    border-left-width: 3px !important; margin-bottom: 8px !important; list-style: none !important;
+}
+ul.messagelist li.success { background: var(--message-success-bg) !important; color: var(--primary) !important; border-color: var(--primary) !important; }
+ul.messagelist li.warning { background: var(--message-warning-bg) !important; color: var(--body-quiet-color) !important; border-color: var(--border-color) !important; }
+ul.messagelist li.error { background: var(--message-error-bg) !important; color: var(--error-fg) !important; border-color: var(--error-fg) !important; }
+
+/* ══════════════════════════════════════════
+   SIDEBAR DE NAVEGACIÓN
+   ══════════════════════════════════════════ */
+#nav-sidebar { background: var(--header-bg) !important; border-right: 1px solid var(--hairline-color) !important; }
+#nav-sidebar .module { border: none !important; box-shadow: none !important; border-radius: 0 !important; margin-bottom: 4px !important; }
+#nav-sidebar .module caption, #nav-sidebar .module h2 {
+    background: transparent !important; border-bottom: 1px solid var(--hairline-color) !important;
+    color: var(--body-loud-color) !important; font-size: 10.5px !important; font-weight: 700 !important;
+    text-transform: uppercase !important; letter-spacing: 0.09em !important; padding: 14px 16px 7px !important;
+    font-family: inherit !important;
+}
+#nav-sidebar table a {
+    color: var(--body-quiet-color) !important; display: block !important;
+    padding: 7px 16px !important; font-size: 13.5px !important; border-radius: 0 !important;
+    transition: background .1s, color .1s;
+}
+#nav-sidebar table a:hover { background: var(--darkened-bg) !important; color: var(--body-loud-color) !important; }
+#nav-sidebar table tr.selected a, #nav-sidebar table a.selected { color: var(--primary) !important; font-weight: 600 !important; }
+.toggle-nav-sidebar { border-right: 1px solid var(--hairline-color) !important; background: var(--header-bg) !important; }
+
+/* ══════════════════════════════════════════
+   FILTROS LATERAL
+   ══════════════════════════════════════════ */
+#changelist-filter {
+    background: var(--header-bg) !important; border-left: 1px solid var(--hairline-color) !important;
+}
+#changelist-filter h2 {
+    background: var(--darkened-bg) !important; border-bottom: 1px solid var(--hairline-color) !important;
+    color: var(--body-loud-color) !important; font-size: 10.5px !important; font-weight: 700 !important;
+    text-transform: uppercase !important; letter-spacing: 0.09em !important; padding: 12px 16px !important;
+    font-family: inherit !important;
+}
+#changelist-filter h3 {
+    color: var(--body-quiet-color) !important; font-size: 11px !important;
+    font-weight: 700 !important; text-transform: uppercase !important;
+    letter-spacing: 0.07em !important; padding: 10px 16px 3px !important; margin: 0 !important;
+}
+#changelist-filter ul { margin: 0 !important; padding: 0 0 8px !important; }
+#changelist-filter ul li { list-style: none !important; }
+#changelist-filter ul li a {
+    display: block !important; padding: 6px 16px !important;
+    color: var(--body-quiet-color) !important; font-size: 13px !important;
+    transition: background .1s, color .1s !important;
+}
+#changelist-filter ul li a:hover { background: var(--darkened-bg) !important; color: var(--body-loud-color) !important; }
+#changelist-filter ul li.selected a { color: var(--primary) !important; font-weight: 600 !important; }
+
+/* ══════════════════════════════════════════
+   PAGINACIÓN
+   ══════════════════════════════════════════ */
+.paginator {
+    background: var(--darkened-bg) !important; border-top: 1px solid var(--hairline-color) !important;
+    padding: 11px 18px !important; color: var(--body-quiet-color) !important; font-size: 13px !important;
+}
+.paginator a { color: var(--link-fg) !important; }
+.paginator .this-page {
+    background: var(--primary) !important; color: var(--button-fg) !important;
+    border-radius: 5px !important; padding: 3px 9px !important;
+}
+
+/* ══════════════════════════════════════════
+   DASHBOARD — grid
+   ══════════════════════════════════════════ */
+.dashboard #content {
+    width: auto !important; max-width: 1200px !important;
+    margin: 24px auto !important; padding: 0 24px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 280px !important;
+    gap: 0 28px !important; align-items: start !important;
+}
+.dashboard #content > h1 { grid-column: 1 / -1; margin-bottom: 20px !important; }
+.dashboard #content > br.clear { display: none !important; }
+.dashboard #content-main { grid-column: 1; grid-row: 2; float: none !important; width: auto !important; }
+.dashboard #content-main.app-list {
+    display: grid !important; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
+    gap: 16px !important; align-items: start !important;
+}
+.dashboard #content-main.app-list > div.module { margin-bottom: 0 !important; }
+.dashboard #content-main.app-list > h2.admin-group-title {
+    grid-column: 1 / -1 !important;
+    margin: 4px 0 0 !important;
+    padding-bottom: 6px !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+    font-family: var(--font-display) !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--body-loud-color) !important;
+    text-transform: uppercase !important;
+    letter-spacing: .04em !important;
+}
+.dashboard #content-main.app-list > h2.admin-group-title:first-child { margin-top: 0 !important; }
+.dashboard #content-related { grid-column: 2; grid-row: 2; float: none !important; width: auto !important; margin: 0 !important; }
+@media (max-width: 900px) {
+    .dashboard #content { grid-template-columns: 1fr !important; }
+    .dashboard #content-related { grid-column: 1; grid-row: 3; }
+}
+
+/* ══════════════════════════════════════════
+   AUTOFILL + CALENDARIO
+   ══════════════════════════════════════════ */
+.calendar caption, .calendarbox h2 {
+    background: var(--darkened-bg) !important; color: var(--body-loud-color) !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+}
+.calendar td.selected a { background: var(--selected-bg) !important; color: var(--body-loud-color) !important; }
+.calendar td.nonday { background: var(--darkened-bg) !important; }
+/* Fix: la tipografia del admin es mas ancha que la fuente por defecto,
+   por eso la tabla del calendario (auto width) se pasaba del ancho fijo
+   de .calendarbox (228px) y los ultimos 3 dias de la semana quedaban
+   recortados por el overflow:hidden del contenedor. */
+.calendar table { table-layout: fixed !important; width: 100% !important; }
+.calendar th, .calendar td { padding-left: 0 !important; padding-right: 0 !important; }
+
+/* Atajos de fecha/hora (Hoy | Calendario, Ahora | Reloj) */
+.datetimeshortcuts { color: var(--body-quiet-color) !important; font-size: 12px !important; margin-left: 6px !important; }
+.datetimeshortcuts a { color: var(--link-fg) !important; }
+.clockbox, .calendarbox {
+    background: var(--header-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 20px rgba(33,36,31,.12) !important;
+}
+.timelist a { color: var(--body-fg) !important; }
+.timelist a:hover, .timelist li.selected a { background: var(--selected-bg) !important; color: var(--body-loud-color) !important; }
+.calendar-shortcuts { color: var(--body-quiet-color) !important; }
+
+/* ══════════════════════════════════════════
+   FIELDSETS COLAPSABLES
+   ══════════════════════════════════════════ */
+fieldset.collapse:not(.collapsed) .collapse-toggle,
+details.collapse summary { cursor: pointer !important; }
+.collapse-toggle, summary.collapse-toggle {
+    color: var(--link-fg) !important;
+    font-weight: 600 !important;
+}
+fieldset.module.collapse { border-top: none !important; }
+
+/* ══════════════════════════════════════════
+   INLINES (TabularInline / StackedInline)
+   ══════════════════════════════════════════ */
+.inline-group { margin-bottom: 22px !important; }
+.inline-group .tabular {
+    border: none !important;
+}
+.inline-related {
+    border: 1px solid var(--hairline-color) !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    margin-bottom: 14px !important;
+    background: var(--header-bg) !important;
+}
+.inline-related h3 {
+    background: var(--darkened-bg) !important;
+    color: var(--body-loud-color) !important;
+    border-bottom: 1px solid var(--hairline-color) !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+.inline-related h3 .inline_label { color: var(--body-loud-color) !important; }
+.inline-related h3 .inline-deletelink {
+    background: transparent !important;
+    color: var(--error-fg) !important;
+    float: right !important;
+}
+.tabular.inline-related table { margin: 0 !important; }
+.tabular.inline-related tbody tr:nth-child(even) { background: transparent !important; }
+.tabular.inline-related td, .tabular.inline-related th { border-color: var(--hairline-color) !important; }
+.tabular.inline-related tr.form-row { padding: 0 !important; }
+.tabular.inline-related .original { color: var(--body-quiet-color) !important; font-size: 12px !important; }
+.add-row {
+    background: var(--darkened-bg) !important;
+    border-top: 1px solid var(--hairline-color) !important;
+}
+.add-row a, .inline-group .add-row a {
+    color: var(--link-fg) !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 9px 16px !important;
+    display: inline-block !important;
+}
+.inline-group .tabular tr.add-row td { padding: 0 !important; }
+td.delete input, th.delete input { accent-color: var(--error-fg) !important; }
+
+/* ══════════════════════════════════════════
+   SELECT2 (autocomplete_fields / raw_id related)
+   ══════════════════════════════════════════ */
+.select2-container--admin-autocomplete .select2-selection--single {
+    background: var(--header-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    height: 38px !important;
+}
+.select2-container--admin-autocomplete .select2-selection--single .select2-selection__rendered {
+    color: var(--body-fg) !important;
+    line-height: 36px !important;
+    padding-left: 11px !important;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+}
+.select2-container--admin-autocomplete .select2-selection--single .select2-selection__arrow { height: 36px !important; }
+.select2-container--admin-autocomplete.select2-container--focus .select2-selection--single,
+.select2-container--admin-autocomplete.select2-container--open .select2-selection--single {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(43,71,52,.14) !important;
+}
+.select2-dropdown {
+    background: var(--header-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 20px rgba(33,36,31,.14) !important;
+    overflow: hidden !important;
+}
+.select2-search--dropdown { padding: 8px !important; background: var(--header-bg) !important; }
+.select2-search--dropdown .select2-search__field {
+    background: var(--body-bg) !important;
+    color: var(--body-fg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 7px 10px !important;
+}
+.select2-results__option {
+    color: var(--body-fg) !important;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    font-size: 13.5px !important;
+    padding: 8px 12px !important;
+}
+.select2-container--admin-autocomplete .select2-results__option--highlighted[aria-selected] {
+    background: var(--primary) !important; color: var(--button-fg) !important;
+}
+.select2-results__option[aria-selected="true"] { background: var(--selected-bg) !important; }
+.select2-container--admin-autocomplete .select2-selection--multiple {
+    background: var(--header-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+}
+.select2-selection__choice {
+    background: var(--selected-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 5px !important;
+    color: var(--body-fg) !important;
+}
+.related-widget-wrapper-link.add-related, .related-widget-wrapper-link {
+    color: var(--link-fg) !important;
+}
+
+/* ══════════════════════════════════════════
+   LIST_EDITABLE (celdas editables del changelist)
+   ══════════════════════════════════════════ */
+#changelist table tbody tr td.field-precio_unitario input,
+#changelist .form-row input[type="text"],
+#changelist .form-row input[type="number"] {
+    background: var(--body-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 5px !important;
+    padding: 5px 8px !important;
+    font-size: 13px !important;
+    width: 100% !important;
+}
+#changelist-form .row1, #changelist-form .row2 { background: transparent !important; }
+
+/* ══════════════════════════════════════════
+   OBJECT-TOOLS / HISTORIAL / ADDLINK
+   ══════════════════════════════════════════ */
+.object-tools { margin-top: 0 !important; }
+.object-tools li { margin-left: 8px !important; }
+.object-tools a.addlink {
+    background: var(--button-bg) !important; color: var(--button-fg) !important;
+    padding: 8px 16px 8px 14px !important; font-weight: 600 !important;
+}
+.object-tools a.addlink:hover { background: var(--button-hover-bg) !important; }
+#content .object-tools a.historylink, #content .object-tools a.viewsitelink,
+#toolbar .object-tools a.historylink, #toolbar .object-tools a.viewsitelink {
+    background: var(--darkened-bg) !important; color: var(--body-quiet-color) !important;
+    border: 1px solid var(--border-color) !important; padding: 7px 14px !important;
+}
+#content .object-tools a.historylink:hover, #content .object-tools a.viewsitelink:hover,
+#toolbar .object-tools a.historylink:hover, #toolbar .object-tools a.viewsitelink:hover { background: var(--selected-row) !important; color: var(--body-loud-color) !important; }
+#change-history table { width: 100% !important; }
+
+/* ══════════════════════════════════════════
+   CONFIRMACIÓN DE ELIMINACIÓN
+   ══════════════════════════════════════════ */
+.delete-confirmation form input[type="submit"] {
+    background: var(--error-fg) !important; color: #fff !important;
+}
+.delete-confirmation form input[type="submit"]:hover { opacity: .9 !important; }
+.delete-confirmation ul.deletelist, ul.deleted-objects-list, ul.deletelist-summary {
+    background: var(--darkened-bg) !important; border: 1px solid var(--hairline-color) !important;
+    border-radius: 8px !important; padding: 12px 16px 12px 32px !important;
+}
+
+/* ══════════════════════════════════════════
+   RESULT_LIST — cambios/orden y checkbox de seleccion
+   ══════════════════════════════════════════ */
+#changelist table thead th.sorted .sortoptions a.sortremove,
+#changelist table thead th a.sortremove { opacity: .55 !important; }
+input.action-select, #action-toggle { accent-color: var(--primary) !important; }
+#changelist table input[type="checkbox"] { width: 15px !important; height: 15px !important; }
+
+/* ══════════════════════════════════════════
+   ERRORES DE FORMULARIO
+   ══════════════════════════════════════════ */
+.errorlist { background: none !important; padding: 0 !important; margin: 4px 0 0 !important; }
+.errorlist li {
+    background: var(--message-error-bg) !important; color: var(--error-fg) !important;
+    border-left: 3px solid var(--error-fg) !important; border-radius: 6px !important;
+    padding: 7px 12px !important; font-size: 12.5px !important; margin-bottom: 4px !important; list-style: none !important;
+}
+.errornote {
+    background: var(--message-error-bg) !important; color: var(--error-fg) !important;
+    border: 1px solid var(--error-fg) !important; border-radius: 8px !important; padding: 11px 16px !important;
+    font-size: 13.5px !important; margin: 16px 24px 0 !important;
+}
+.form-row.errors { border-left: 3px solid var(--error-fg) !important; }
+
+/* ══════════════════════════════════════════
+   SCROLLBAR (Chromium/Edge) para que combine con el resto del sistema
+   ══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 8px; border: 3px solid var(--body-bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--body-quiet-color); }
 </style>
 {% endblock %}
 
 {% block usertools %}
 {% if has_permission %}
 <div id="user-tools">
-    <button class="theme-toggle-admin" onclick="toggleTheme()">🌙</button>
+    <button class="theme-toggle-admin" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
+        <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 3v2.25M12 18.75V21M4.219 4.219l1.591 1.591M18.19 18.19l1.591 1.591M3 12h2.25M18.75 12H21M4.219 19.781l1.591-1.591M18.19 5.81l1.591-1.591"/></svg>
+    </button>
     {% block welcome-msg %}
-        {% translate 'Welcome,' %}
-        <strong>{% firstof user.get_short_name user.get_username %}</strong>.
+    <span style="color:var(--body-quiet-color); font-size:12px;">{% translate 'Bienvenido,' %}</span>
+    <strong style="font-size:13px;">{% firstof user.get_short_name user.get_username %}</strong>
     {% endblock %}
     {% block userlinks %}
-        <a href="/facturas/">Facturación</a> /
-        {% if site_url %}
-            <a href="{{ site_url }}">{% translate 'View site' %}</a> /
-        {% endif %}
-        {% if user.is_active and user.is_staff %}
-            {% url 'django-admindocs-docroot' as docsroot %}
-            {% if docsroot %}
-                <a href="{{ docsroot }}">{% translate 'Documentation' %}</a> /
-            {% endif %}
-        {% endif %}
+    <div class="user-tools-links">
+        <a href="/facturas/" class="tool-link tool-link-primary"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.75h7.5L19 8.25V19.5a.75.75 0 01-.75.75H7a.75.75 0 01-.75-.75V4.5A.75.75 0 017 3.75z"/><path d="M14.5 3.75V8.25H19M9 13h6M9 16.25h6"/></svg> Facturación</a>
         {% if user.has_usable_password %}
-            <a href="{% url 'admin:password_change' %}">{% translate 'Change password' %}</a> /
+        <a href="{% url 'admin:password_change' %}" class="tool-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="3.25"/><path d="M10.3 12.7L18 5m0 0h3.25M18 5v3.25M15 8l2 2"/></svg> Cambiar contraseña</a>
         {% endif %}
         <form id="logout-form" method="post" action="{% url 'admin:logout' %}">
             {% csrf_token %}
-            <button type="submit">{% translate 'Log out' %}</button>
+            <button type="submit" class="tool-link"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.75 8.25V6A2.25 2.25 0 0013.5 3.75h-6A2.25 2.25 0 005.25 6v12A2.25 2.25 0 007.5 20.25h6A2.25 2.25 0 0015.75 18v-2.25M19.5 12H9.75M19.5 12l-3-3M19.5 12l-3 3"/></svg> Salir</button>
         </form>
+    </div>
     {% endblock %}
 </div>
 {% endif %}

@@ -1,0 +1,129 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ticket {{ ticket.numero }} — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:760px;">
+        <a href="{% url 'listado_tickets' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver a tickets</a>
+
+        <div class="card">
+            <div class="card-header" style="background:var(--bg-sunken);">
+                <div>
+                    <p class="page-eyebrow" style="margin:0 0 4px;">Ticket {{ ticket.numero }}</p>
+                    <span style="font-size:18px; font-weight:700;">{{ ticket.titulo }}</span>
+                </div>
+                {% if ticket.esta_cerrado %}
+                    <span class="badge badge-secondary">Cerrado</span>
+                {% else %}
+                    <span class="badge badge-success">Pendiente</span>
+                {% endif %}
+            </div>
+
+            <div class="card-body">
+                <div class="info-grid">
+                    <div>
+                        <div class="label">Empresa / cliente</div>
+                        <div class="value" style="font-weight:600;">{{ ticket.cliente.nombre_completo }}</div>
+                    </div>
+                    <div>
+                        <div class="label">Contacto técnico</div>
+                        <div class="value">{{ ticket.contacto_nombre|default:"—" }}</div>
+                        {% if ticket.contacto_email %}
+                        <div style="font-size:12.5px; color:var(--text-muted); margin-top:3px;">{{ ticket.contacto_email }}</div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="label">Apertura</div>
+                        <div class="value">{{ ticket.fecha_inicio|date:"d/m/Y" }} <span style="color:var(--text-muted);">· {{ ticket.fecha_inicio|date:"H:i" }} hs</span></div>
+                    </div>
+                    {% if ticket.fecha_fin %}
+                    <div>
+                        <div class="label">Cierre</div>
+                        <div class="value">{{ ticket.fecha_fin|date:"d/m/Y" }} <span style="color:var(--text-muted);">· {{ ticket.fecha_fin|date:"H:i" }} hs</span></div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div style="margin-top:16px;">
+                    <div class="label" style="margin-bottom:6px;">Descripción</div>
+                    <p style="margin:0; white-space:pre-line; font-size:14px;">{{ ticket.descripcion }}</p>
+                </div>
+
+                {% if ticket.contacto_email %}
+                <div class="action-bar">
+                    <a href="{% url 'notificar_ticket' ticket.id %}?tipo={% if ticket.esta_cerrado %}cierre{% else %}apertura{% endif %}"
+                       class="btn btn-outline">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Reenviar notificación
+                    </a>
+                </div>
+                {% else %}
+                <p style="margin-top:10px; font-size:12.5px; color:var(--text-faint);">
+                    Este ticket no tiene email de contacto cargado, así que no se puede notificar.
+                    Agregá un email de soporte en la ficha del cliente o editá el ticket desde el panel admin.
+                </p>
+                {% endif %}
+
+                <!-- Cerrar / Reabrir con motivo (se incluye en la notificación) -->
+                <div style="margin-top:18px; padding-top:18px; border-top:1px solid var(--border);">
+                    {% if ticket.esta_cerrado %}
+                        <form method="post" action="{% url 'reabrir_ticket' ticket.id %}" onsubmit="return marcarCargando(this);">
+                            {% csrf_token %}
+                            <div class="field">
+                                <label for="nota-reapertura">Motivo de la reapertura</label>
+                                <textarea id="nota-reapertura" name="nota" rows="3"
+                                          placeholder="Por qué se reabre el ticket. Se incluye en el email de notificación."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-outline">↩ Reabrir ticket</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'cerrar_ticket' ticket.id %}"
+                              onsubmit="return confirm('¿Cerrar este ticket? Después vas a poder revisar y enviar el email de cierre.') &amp;&amp; marcarCargando(this);">
+                            {% csrf_token %}
+                            <div class="field">
+                                <label for="nota-cierre">Motivo del cierre</label>
+                                <textarea id="nota-cierre" name="nota" rows="3"
+                                          placeholder="Cómo se resolvió o por qué se cierra. Se incluye en el email de notificación."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success">Cerrar ticket →</button>
+                        </form>
+                    {% endif %}
+                </div>
+
+                {% if ticket.eventos.all %}
+                <div style="margin-top:22px;">
+                    <div class="label" style="margin-bottom:8px;">Historial de cierres y reaperturas</div>
+                    <ul style="list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;">
+                        {% for ev in ticket.eventos.all %}
+                        <li style="padding:10px 12px; background:var(--bg-sunken); border-radius:var(--radius-sm); border-left:3px solid var(--border-strong);">
+                            <div style="display:flex; justify-content:space-between; gap:10px; align-items:baseline;">
+                                {% if ev.tipo == 'CIERRE' %}
+                                <span class="badge badge-success">{{ ev.get_tipo_display }}</span>
+                                {% else %}
+                                <span class="badge badge-secondary">{{ ev.get_tipo_display }}</span>
+                                {% endif %}
+                                <span class="faint" style="font-size:12px;">{{ ev.fecha|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            {% if ev.nota %}
+                            <p style="margin:4px 0 0; white-space:pre-line; font-size:13px; color:var(--text-muted);">{{ ev.nota }}</p>
+                            {% else %}
+                            <p style="margin:4px 0 0; font-size:12.5px; color:var(--text-faint);">Sin motivo cargado.</p>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

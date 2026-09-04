@@ -1,0 +1,121 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Servicios — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container">
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Catálogo facturable</p>
+                <h1 class="page-title" style="margin:0;">Servicios</h1>
+            </div>
+            <a href="{% url 'nuevo_servicio' %}" class="btn btn-primary">+ Nuevo servicio</a>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <form method="get" class="filter-bar">
+            <div class="input-icon" style="flex:1; min-width:240px;">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.75"/><path d="M20.25 20.25l-4.85-4.85"/></svg>
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre…"
+                       autocomplete="off" aria-label="Buscar servicio">
+            </div>
+            <select name="activo" class="filter-select" onchange="this.form.submit()" aria-label="Filtrar por estado">
+                <option value="">Todos</option>
+                <option value="1" {% if activo == '1' %}selected{% endif %}>Activos</option>
+                <option value="0" {% if activo == '0' %}selected{% endif %}>Inactivos</option>
+            </select>
+            <button type="submit" class="btn btn-outline btn-sm">Filtrar</button>
+            {% if q or activo %}
+            <a href="{% url 'listado_servicios' %}" class="btn btn-ghost btn-sm"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg> Limpiar</a>
+            {% endif %}
+        </form>
+
+        {% if servicios %}
+        <div class="card" style="margin-top:14px;">
+            <form method="post" action="{% url 'aplicar_aumento_servicios' %}" id="form-servicios">
+                {% csrf_token %}
+                <div class="table-toolbar">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; text-transform:none; font-size:13px; font-weight:500; color:var(--text-muted); margin:0;">
+                        <input type="checkbox" id="select-all-servicios" style="margin:0;"
+                               onclick="document.querySelectorAll('.servicio-check').forEach(c => c.checked = this.checked);">
+                        Seleccionar todo
+                    </label>
+                    <button type="submit" class="btn btn-outline btn-sm">↗ Aplicar aumento a seleccionados</button>
+                </div>
+                <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:28px;"></th>
+                            <th>Nombre</th>
+                            <th style="text-align:right;">Precio</th>
+                            <th>Alícuota IVA</th>
+                            <th style="text-align:right;">Precio c/IVA</th>
+                            <th>Estado</th>
+                            <th style="width:110px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for servicio in servicios %}
+                        <tr>
+                            <td><input type="checkbox" name="ids" value="{{ servicio.id }}" class="servicio-check"></td>
+                            <td>
+                                <a href="{% url 'editar_servicio' servicio.id %}" style="font-weight:500;">{{ servicio.nombre }}</a>
+                                {% if servicio.descripcion %}<div class="faint" style="font-size:12px; margin-top:2px;">{{ servicio.descripcion|truncatechars:80 }}</div>{% endif %}
+                            </td>
+                            <td class="mono" style="text-align:right;">${{ servicio.precio_unitario|floatformat:2 }}</td>
+                            <td>{{ servicio.get_alicuota_iva_display }}</td>
+                            <td class="mono faint" style="text-align:right;">${{ servicio.precio_con_iva|floatformat:2 }}</td>
+                            <td>
+                                {% if servicio.activo %}
+                                <span class="badge badge-success">Activo</span>
+                                {% else %}
+                                <span class="badge badge-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>{% spaceless %}<div class="col-acciones">
+                                <a href="{% url 'editar_servicio' servicio.id %}" class="btn btn-outline btn-icon" title="Editar" aria-label="Editar servicio"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/><path d="M15 6.75l3 3"/></svg></a><button form="toggle-{{ servicio.id }}" type="submit" class="btn btn-outline btn-icon" title="{% if servicio.activo %}Desactivar{% else %}Activar{% endif %}" aria-label="{% if servicio.activo %}Desactivar servicio{% else %}Activar servicio{% endif %}">{% if servicio.activo %}<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>{% else %}<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12.75l1.5 1.5 3.75-3.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>{% endif %}</button><button form="delete-{{ servicio.id }}" type="submit" class="btn btn-outline btn-icon" title="Eliminar" aria-label="Eliminar servicio"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9M19.228 5.79A48.108 48.108 0 0015.164 4.5m-6.328 0L8.72 5.79m9.548 0l.842 14.71a2.25 2.25 0 01-2.244 2.5H7.134a2.25 2.25 0 01-2.244-2.5l.842-14.71m9.548 0L15.164 4.5m0 0V3.375c0-.621-.504-1.125-1.125-1.125h-1.5c-.621 0-1.125.504-1.125 1.125V4.5"/></svg></button></div>{% endspaceless %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </form>
+
+            <!-- Forms separados fuera de la tabla (no pueden anidarse dentro del <form> de selección múltiple) -->
+            {% for servicio in servicios %}
+            <form method="post" action="{% url 'alternar_activo_servicio' servicio.id %}" id="toggle-{{ servicio.id }}" style="display:none;">{% csrf_token %}</form>
+            <form method="post" action="{% url 'eliminar_servicio' servicio.id %}" id="delete-{{ servicio.id }}" style="display:none;"
+                  onsubmit="return confirm('¿Eliminar \'{{ servicio.nombre|escapejs }}\'? Si tiene facturas asociadas, se lo va a desactivar en vez de eliminarlo.');">{% csrf_token %}</form>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="empty-state">
+                {% if q or activo %}
+                <div class="empty-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.75"/><path d="M20.25 20.25l-4.85-4.85"/></svg></div>
+                <p>No hay servicios que coincidan con el filtro.</p>
+                <a href="{% url 'listado_servicios' %}" class="btn btn-outline btn-sm">Limpiar filtro</a>
+                {% else %}
+                <div class="empty-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg></div>
+                <p>Todavía no hay servicios cargados.</p>
+                <a href="{% url 'nuevo_servicio' %}" class="btn btn-primary btn-sm">Crear el primer servicio</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

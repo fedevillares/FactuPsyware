@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if es_nuevo %}Nuevo cliente{% else %}Editar cliente{% endif %} — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:640px;">
+        <a href="{% url 'listado_clientes' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver a clientes</a>
+
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Pacientes / empresas</p>
+                <h1 class="page-title" style="margin:0;">
+                    {% if es_nuevo %}Nuevo cliente{% else %}Editar cliente{% endif %}
+                </h1>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-bottom:16px;">{{ error }}</div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post" onsubmit="return marcarCargando(this)">
+                    {% csrf_token %}
+
+                    <p class="section-label">Identificación</p>
+                    <div class="field">
+                        <label for="nombre_completo">Nombre / Razón social</label>
+                        <input type="text" id="nombre_completo" name="nombre_completo" value="{{ datos.nombre_completo }}" required maxlength="200" autofocus>
+                    </div>
+                    <div class="info-grid">
+                        <div class="field">
+                            <label for="tipo_documento">Tipo de documento</label>
+                            <select id="tipo_documento" name="tipo_documento" required>
+                                {% for valor, etiqueta in tipo_documento_choices %}
+                                <option value="{{ valor }}" {% if datos.tipo_documento == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="numero_documento">Número de documento</label>
+                            <input type="text" id="numero_documento" name="numero_documento" value="{{ datos.numero_documento }}" required maxlength="20">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="condicion_iva">Condición frente al IVA</label>
+                        <select id="condicion_iva" name="condicion_iva" required>
+                            {% for valor, etiqueta in condicion_iva_choices %}
+                            <option value="{{ valor }}" {% if datos.condicion_iva == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <p class="section-label" style="margin-top:24px;">Contacto</p>
+                    <div class="info-grid">
+                        <div class="field">
+                            <label for="telefono">Teléfono</label>
+                            <input type="text" id="telefono" name="telefono" value="{{ datos.telefono }}" maxlength="30">
+                        </div>
+                        <div class="field">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" value="{{ datos.email }}">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="direccion">Dirección</label>
+                        <input type="text" id="direccion" name="direccion" value="{{ datos.direccion }}" maxlength="255">
+                    </div>
+
+                    <p class="section-label" style="margin-top:24px;">Soporte técnico (ticketera)</p>
+                    <p class="field-hint" style="margin-top:-8px; margin-bottom:14px;">Persona a la que se le notifican las aperturas y cierres de tickets. Distinto del email general.</p>
+                    <div class="info-grid">
+                        <div class="field">
+                            <label for="contacto_soporte_nombre">Contacto de soporte</label>
+                            <input type="text" id="contacto_soporte_nombre" name="contacto_soporte_nombre" value="{{ datos.contacto_soporte_nombre }}" maxlength="200">
+                        </div>
+                        <div class="field">
+                            <label for="contacto_soporte_email">Email de soporte</label>
+                            <input type="email" id="contacto_soporte_email" name="contacto_soporte_email" value="{{ datos.contacto_soporte_email }}">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            {% if es_nuevo %}Crear cliente{% else %}Guardar cambios{% endif %}
+                        </button>
+                        <a href="{% url 'listado_clientes' %}" class="btn btn-ghost">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -9,69 +9,66 @@
     <script src="{% static 'js/theme.js' %}"></script>
 </head>
 <body>
-    <div class="app-header">
-        <div class="brand">
-            <img src="{% static 'img/logo.png' %}" alt="logo">
-            <span>Facturación</span>
-        </div>
-        <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
-    </div>
+    {% include "_nav.html" %}
 
     <div class="app-container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-            <h1 class="page-title" style="margin:0;">Verificación de entornos</h1>
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Estado de la integración</p>
+                <h1 class="page-title" style="margin:0;">Verificación de entornos</h1>
+            </div>
             <a href="{% url 'panel_verificacion' %}" class="btn btn-outline btn-sm">↻ Volver a verificar</a>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <div class="verif-grid">
 
             <!-- Homologación -->
             <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <h2 style="margin:0;">🧪 Entorno de prueba</h2>
+                <div class="card-header">
+                    <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.75 3h4.5M10.5 3v6.29a1.5 1.5 0 01-.257.84l-4.788 7.033A1.5 1.5 0 006.7 19.5h10.6a1.5 1.5 0 001.245-2.337l-4.788-7.033a1.5 1.5 0 01-.257-.84V3"/></svg> Entorno de prueba</h2>
                     {% if homologacion.listo %}
                         <span class="badge badge-success">Listo</span>
                     {% else %}
                         <span class="badge badge-danger">No listo</span>
                     {% endif %}
                 </div>
-                <p style="opacity:0.7; margin-top:0;">Homologación AFIP — datos no fiscales, para pruebas.</p>
+                <p class="muted" style="margin:0; padding:14px 20px 4px;">Homologación AFIP — datos no fiscales, para pruebas.</p>
 
                 <table>
                     <tbody>
                         <tr>
-                            <td style="white-space:nowrap;">Certificado</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">Certificado</th>
                             <td>
                                 {% if homologacion.certificado.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Falta</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.certificado.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ homologacion.certificado.detalle }}</div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="white-space:nowrap;">Clave privada</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">Clave privada</th>
                             <td>
                                 {% if homologacion.clave.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Falta</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.clave.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ homologacion.clave.detalle }}</div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="white-space:nowrap;">Certificado ↔ clave</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">Certificado ↔ clave</th>
                             <td>
                                 {% if homologacion.correspondencia.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.correspondencia.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ homologacion.correspondencia.detalle }}</div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="white-space:nowrap;">WSFE alcanzable</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">WSFE alcanzable</th>
                             <td>
                                 {% if homologacion.wsfe_alcanzable.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.wsfe_alcanzable.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ homologacion.wsfe_alcanzable.detalle }}</div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="white-space:nowrap;">Login WSAA</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">Login WSAA</th>
                             <td>
                                 {% if homologacion.login_wsaa.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ homologacion.login_wsaa.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ homologacion.login_wsaa.detalle }}</div>
                             </td>
                         </tr>
                     </tbody>
@@ -80,51 +77,51 @@
 
             <!-- Producción -->
             <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <h2 style="margin:0;">🏛️ Entorno real</h2>
+                <div class="card-header">
+                    <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21h18M4.5 21V9.75M19.5 21V9.75M2.25 9.75L12 3l9.75 6.75M8.25 21v-6.75M12 21v-6.75M15.75 21v-6.75"/></svg> Entorno real</h2>
                     {% if produccion.listo %}
                         <span class="badge badge-success">Listo</span>
                     {% else %}
                         <span class="badge badge-danger">No listo</span>
                     {% endif %}
                 </div>
-                <p style="opacity:0.7; margin-top:0;">Producción AFIP — comprobantes fiscales reales.</p>
+                <p class="muted" style="margin:0; padding:14px 20px 4px;">Producción AFIP — comprobantes fiscales reales.</p>
 
                 <table>
                     <tbody>
                         <tr>
-                            <td style="white-space:nowrap;">Certificado</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">Certificado</th>
                             <td>
                                 {% if produccion.certificado.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Falta</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.certificado.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ produccion.certificado.detalle }}</div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="white-space:nowrap;">Clave privada</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">Clave privada</th>
                             <td>
                                 {% if produccion.clave.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Falta</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.clave.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ produccion.clave.detalle }}</div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="white-space:nowrap;">Certificado ↔ clave</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">Certificado ↔ clave</th>
                             <td>
                                 {% if produccion.correspondencia.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.correspondencia.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ produccion.correspondencia.detalle }}</div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="white-space:nowrap;">WSFE alcanzable</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">WSFE alcanzable</th>
                             <td>
                                 {% if produccion.wsfe_alcanzable.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.wsfe_alcanzable.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ produccion.wsfe_alcanzable.detalle }}</div>
                             </td>
                         </tr>
                         <tr>
-                            <td style="white-space:nowrap;">Login WSAA</td>
+                            <th scope="row" style="white-space:nowrap; font-weight:600; text-align:left;">Login WSAA</th>
                             <td>
                                 {% if produccion.login_wsaa.ok %}<span class="badge badge-success">OK</span>{% else %}<span class="badge badge-danger">Error</span>{% endif %}
-                                <div style="font-size:0.85em; opacity:0.7;">{{ produccion.login_wsaa.detalle }}</div>
+                                <div class="field-hint" style="margin-top:4px;">{{ produccion.login_wsaa.detalle }}</div>
                             </td>
                         </tr>
                     </tbody>
@@ -133,7 +130,42 @@
 
         </div>
 
-        <p style="margin-top:24px; opacity:0.6; font-size:0.9em;">
+        <div class="card" style="margin-top:20px;">
+            <div class="card-header">
+                <h2><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Envío de facturas por email</h2>
+                {% if email_configurado %}
+                    <span class="badge badge-success">Configurado</span>
+                {% else %}
+                    <span class="badge badge-danger">Sin configurar</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if not email_configurado %}
+                <p class="muted" style="margin-top:0;">
+                    No hay una cuenta de email configurada. Cargala en el
+                    <a href="/admin/arca/empresaconfig/1/change/">panel de administración → Configuración de la empresa</a>.
+                </p>
+                {% endif %}
+
+                {% if email_mensaje %}
+                <div class="alert {% if email_exito %}alert-success{% else %}alert-danger{% endif %}">
+                    {{ email_mensaje }}
+                </div>
+                {% endif %}
+
+                <p class="section-label">Enviate un email de prueba para confirmar que la configuración SMTP funciona:</p>
+                <form method="post" action="{% url 'probar_email' %}" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Enviando…';">
+                    {% csrf_token %}
+                    <div class="field" style="flex:1; min-width:220px; margin-bottom:0;">
+                        <label for="destinatario_prueba">Email de destino</label>
+                        <input type="email" id="destinatario_prueba" name="destinatario_prueba" value="{{ destinatario_prueba }}" placeholder="tu-email@ejemplo.com" required {% if not email_configurado %}disabled{% endif %}>
+                    </div>
+                    <button type="submit" class="btn btn-outline" {% if not email_configurado %}disabled{% endif %}>Enviar prueba</button>
+                </form>
+            </div>
+        </div>
+
+        <p class="faint" style="margin-top:24px; font-size:13px; line-height:1.6;">
             Este chequeo solo autentica contra AFIP (login WSAA) y consulta el estado del servicio (FEDummy).
             No emite comprobantes ni modifica datos fiscales.
         </p>

@@ -2,25 +2,29 @@
 {% load static %}
 
 {% block content %}
-<div style="padding: 20px;">
-    <h1 style="margin-bottom: 16px;">Aplicar aumento por inflación</h1>
-    <p>Se aplicará el porcentaje a los siguientes servicios:</p>
-    <ul>
+<div style="padding: 24px; max-width: 560px;">
+    <h1 style="margin: 0 0 6px; font-size: 20px;">Aplicar aumento por inflación</h1>
+    <p style="color: var(--body-quiet-color, #55584A); margin: 0 0 18px;">Se aplicará el porcentaje a los siguientes servicios:</p>
+
+    <ul style="list-style: none; margin: 0 0 22px; padding: 0; border: 1px solid var(--hairline-color, #E6E1D2); border-radius: 10px; overflow: hidden;">
         {% for servicio in servicios %}
-        <li>{{ servicio.nombre }} — precio actual: ${{ servicio.precio_unitario|floatformat:2 }}</li>
+        <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px; {% if not forloop.last %}border-bottom: 1px solid var(--hairline-color, #E6E1D2);{% endif %} background: var(--header-bg, #fff); font-size: 13.5px;">
+            <span>{{ servicio.nombre }}</span>
+            <span style="font-family: var(--font-family-monospace, monospace); color: var(--body-quiet-color, #55584A);">$ {{ servicio.precio_unitario|floatformat:2 }}</span>
+        </li>
         {% endfor %}
     </ul>
 
-    <form method="post" style="margin-top: 20px;">
+    <form method="post">
         {% csrf_token %}
         {% for servicio in servicios %}
         <input type="hidden" name="{{ action_checkbox_name }}" value="{{ servicio.pk }}">
         {% endfor %}
         <input type="hidden" name="action" value="aplicar_aumento">
 
-        <div style="margin-bottom: 16px; max-width: 300px;">
+        <div class="form-row" style="border: 1px solid var(--border-color, #CFC9B4) !important; border-radius: 10px !important; margin-bottom: 18px !important;">
             <label for="porcentaje">Porcentaje de aumento (%)</label>
-            <input type="number" name="porcentaje" id="porcentaje" step="0.01" required style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text);">
+            <input type="number" name="porcentaje" id="porcentaje" step="0.01" required style="max-width: 220px;">
         </div>
 
         <button type="submit" name="apply" value="1" class="button">Aplicar aumento</button>

@@ -1,152 +1,50 @@
 ================================================================================
-SISTEMA DE FACTURACIÓN ELECTRÓNICA ARGENTINA (ARCA/AFIP)
-Desarrollado con Django + ARCA Homologación
+FACTUPSYWARE — INFORME TÉCNICO
 ================================================================================
 
 DESCRIPCIÓN GENERAL
+--------------------
+Sistema de facturación (Django) para un consultorio/servicio profesional,
+con integración a ARCA (ex AFIP) para facturación electrónica, gestión de
+clientes, servicios, facturas y tickets de soporte.
+
+STACK
+-----
+- Backend: Django (Python), con apps propias: clientes, arca, servicios,
+  facturas, tickets.
+- Certificados propios para conexión con ARCA (carpeta certificados/).
+- Backups automatizados (carpeta backups/).
+- Frontend: templates Django + static (sin framework JS pesado detectado).
+
+ESTRUCTURA DE APPS
 -------------------
-Sistema web completo de facturación electrónica que se integra con ARCA/AFIP
-(Administración Federal de Ingresos Públicos) para la emisión de comprobantes
-fiscales electrónicos en Argentina. Permite generar, gestionar y emitir facturas,
-notas de crédito y notas de débito con solicitud automática de CAE (Código de
-Autorización Electrónica).
+- clientes: modelo Cliente.
+- arca: EmpresaConfig — configuración de la empresa para integración ARCA
+  (facturación electrónica, CUIT, certificados).
+- servicios: modelo Servicio (catálogo de servicios facturables).
+- facturas: Factura, FacturaItem — emisión de facturas con ítems.
+- tickets: Ticket, TicketEvento — sistema de soporte/incidencias con
+  seguimiento de eventos por ticket.
 
-TECNOLOGÍA
-----------
-- Backend: Python 3.13 + Django 6.0.6
-- Base de datos: SQLite
-- Frontend: HTML5 + CSS3 (sistema de diseño personalizado)
-- Autenticación: Django admin con login personalizado
-- Integración ARCA: WSAA (autenticación), WSFE (facturación electrónica)
-- Generación de comprobantes: PDF con QR (RG 4291)
-
-CARACTERÍSTICAS PRINCIPALES
+FUNCIONALIDADES DETECTADAS
 ---------------------------
+- Alta y gestión de clientes.
+- Configuración de datos de la empresa para facturación electrónica ARCA.
+- Catálogo de servicios.
+- Emisión de facturas con múltiples ítems.
+- Sistema de tickets de soporte con historial de eventos.
+- Backups del sistema.
 
-1. GESTIÓN DE CLIENTES
-   • Registro de clientes con tipo y número de documento
-   • Soporte para múltiples tipos: CUIT, CUIL, DNI, CDI, Consumidor Final
-   • Condición frente al IVA (RI, Monotributo, Exento, Consumidor Final)
-   • Datos de contacto y dirección
+ESTADO DEL PROYECTO
+---------------------
+- Repositorio Git inicializado (.git presente).
+- Entorno virtual propio (venv/).
+- Carpetas de logs, media y docs presentes — proyecto en uso activo.
+- Última modificación de carpeta: 18/07/2026.
 
-2. CATÁLOGO DE SERVICIOS/PRODUCTOS
-   • Gestión de servicios con precios y alícuotas IVA
-   • Alícuotas disponibles: 0%, 2.5%, 5%, 10.5%, 21%, 27%
-   • Ajuste masivo de precios por inflación (porcentaje a todos los servicios)
-   • Estados activo/inactivo
-
-3. FACTURACIÓN ELECTRÓNICA
-   • Tipos de comprobante: Factura A, B, C
-   • Estados: Borrador, Autorizada (con CAE), Error
-   • Campos de período facturado y vencimiento de pago
-   • Múltiples condiciones de venta (Contado, Transferencia, Cuenta Corriente, Tarjeta)
-   • Cálculo automático de subtotal, IVA y total
-   • Número de factura oficial: formato Punto de Venta (5 dígitos) - Número (8 dígitos)
-
-4. NOTAS DE CRÉDITO Y DÉBITO
-   • Generación automática de NC/ND vinculadas a facturas originales
-   • Copia de items de la factura para edición
-   • Emisión de CAE para notas de crédito/débito
-   • Soporte para los tres tipos de IVA (A, B, C)
-
-5. INTEGRACIÓN CON ARCA/AFIP
-   • Autenticación WSAA con certificado digital (Homologación)
-   • Solicitud automática de CAE vía WSFE
-   • Validación de datos contra especificaciones ARCA (RG 5616)
-   • Mapeo de condiciones IVA: RI→1, Monotributo→6, Exento→4, CF→5
-   • Manejo de Consumidor Final sin identificar (DocNro=0)
-   • Caching de Ticket de Acceso (TA) para evitar solicitudes duplicadas
-   • Manejo de errores con mensajes descriptivos
-
-6. COMPROBANTES FISCALES
-   • Generación de PDF con diseño oficial ARCA
-   • QR obligatorio (RG 4291) con datos de la factura
-   • Logo de empresa
-   • Transparencia Fiscal Ley 27.743 (IVA contenido)
-   • Período facturado y vencimiento de pago
-   • Datos de empresa y cliente según RG 5616
-   • Impresión y vista previa en navegador
-
-7. INTERFAZ DE USUARIO
-   • Sistema de diseño uniforme (tipografía Inter, colores azul/blanco)
-   • Modo claro/oscuro con persistencia en navegador
-   • Admin de Django personalizado con branding
-   • Listado de facturas con búsqueda y filtros
-   • Detalle de factura con opciones de emisión, notas y comprobante
-   • Panel de administración accesible desde todas las vistas
-
-8. SEGURIDAD Y VALIDACIÓN
-   • Login requerido en todas las vistas
-   • Protección CSRF en formularios
-   • Validación de datos según normas ARCA
-   • Certificado digital para firma de solicitudes WSAA
-   • Almacenamiento seguro de claves privadas
-
-9. CONFIGURACIÓN DE EMPRESA
-   • Singleton de configuración: razón social, CUIT, ingresos brutos
-   • Domicilio, localidad, teléfono
-   • Fecha de inicio de actividades
-   • Condición frente al IVA
-   • Punto de venta predeterminado
-   • Leyenda personalizada en comprobantes
-
-10. FUNCIONALIDADES ADMINISTRATIVAS
-    • Acceso directo a /facturas/ desde panel admin
-    • Acción masiva: aplicar % de aumento por inflación a servicios
-    • Eliminación de borradores (no autoriza eliminar facturas con CAE)
-    • Generación automática de NC/ND desde factura original
-    • Historial de acciones recientes
-    • Tema oscuro/claro en admin
-
-FLUJO TÍPICO DE USO
--------------------
-1. Crear/registrar un cliente en el admin
-2. Agregar servicios/productos con precios e IVA
-3. Crear factura en borrador, seleccionar cliente y agregar items
-   (precio e IVA se autocomplet an al elegir servicio)
-4. Click en "Emitir factura" → solicita CAE a ARCA automáticamente
-5. Si éxito: factura autorizada, se obtiene CAE y vencimiento
-6. Ver comprobante: genera PDF con QR, datos empresa, período, transparencia fiscal
-7. Opcional: generar Nota de Crédito/Débito desde la factura
-8. Eliminar: solo posible en borradores; para autorizadas, usar Nota de Crédito
-
-CONFIGURACIÓN Y DESPLIEGUE
----------------------------
-- Entorno virtual Python (venv/)
-- Archivo .bat para instalación de dependencias (instalar.bat)
-- Archivo .bat para inicio del servidor (iniciar_facturacion.bat)
-- Multi-PC: servidor escucha en 0.0.0.0:8000, configurado con ALLOWED_HOSTS=['*']
-- Certificados ARCA almacenados en carpeta /certificados/
-- Base de datos SQLite en raíz del proyecto
-- Actualmente en **HOMOLOGACIÓN** (entorno de prueba ARCA)
-
-PRÓXIMOS PASOS PARA PRODUCCIÓN
--------------------------------
-1. Solicitar certificado digital de PRODUCCIÓN (no homologación)
-2. Dar de alta punto de venta en ARCA Producción (mediante Clave Fiscal)
-3. Reemplazar URLs WSAA y WSFE en config.py (de homo a producción)
-4. Cambiar certificado y clave privada en /certificados/
-5. Pruebas iniciales con facturas de bajo monto
-6. Habilitación formal por AFIP
-
-EQUIPO Y CRÉDITOS
------------------
-Desarrollado como sistema integral de facturación electrónica compatible
-con normativas ARCA/AFIP para pequeñas y medianas empresas.
-
-NOTAS DE SEGURIDAD
-------------------
-- Las claves privadas del certificado no deben compartirse
-- El certificado actual es de HOMOLOGACIÓN (no válido fiscalmente)
-- En producción, usar solo certificados de la empresa registrados en AFIP
-- Realizar backups regulares de la base de datos
-- Configurar HTTPS en producción
-
-SOPORTE Y DOCUMENTACIÓN
+PENDIENTE / A REVISAR
 -----------------------
-- Documentación ARCA: https://wsass-homo.afip.gob.ar/
-- Especificaciones RG 5616 (datos mínimos)
-- RG 4291 (QR obligatorio)
-- Ley 27.743 (Transparencia Fiscal)
-
+- No se detectó README.md ni requirements.txt en la raíz — recomendable
+  agregar ambos para facilitar instalación en otra máquina.
+- Confirmar variables sensibles (certificados, claves ARCA) fuera de git.
 ================================================================================

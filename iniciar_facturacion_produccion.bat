@@ -3,6 +3,8 @@ setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
 rem ============================================================
+rem  Motor interno de arranque (PRODUCCION). No ejecutar
+rem  directamente: usar "FactuPsyware PRODUCCION.bat"
 rem  ATENCION: este entorno factura contra AFIP REAL.
 rem  Los comprobantes emitidos aqui son fiscales.
 rem ============================================================
@@ -89,7 +91,7 @@ rem ============================================================
 set "NEED_INSTALL=0"
 if not exist "%~dp0venv\.deps_ok" set "NEED_INSTALL=1"
 if exist "%~dp0venv\.deps_ok" (
-    fc /b "%~dp0requirements.txt" "%~dp0venv\.deps_ok" >nul 2>nul
+    fc /b "%~dp0config\requirements.txt" "%~dp0venv\.deps_ok" >nul 2>nul
     if not !errorlevel!==0 set "NEED_INSTALL=1"
 )
 
@@ -97,14 +99,14 @@ if "!NEED_INSTALL!"=="1" (
     echo.
     echo Instalando dependencias necesarias...
     "%~dp0venv\Scripts\python.exe" -m pip install --upgrade pip -q
-    "%~dp0venv\Scripts\python.exe" -m pip install -r "%~dp0requirements.txt" -q
+    "%~dp0venv\Scripts\python.exe" -m pip install -r "%~dp0config\requirements.txt" -q
     if !errorlevel! neq 0 (
         echo.
         echo ERROR: fallo la instalacion de dependencias. Revisa tu conexion a internet.
         pause
         exit /b 1
     )
-    copy /y "%~dp0requirements.txt" "%~dp0venv\.deps_ok" >nul
+    copy /y "%~dp0config\requirements.txt" "%~dp0venv\.deps_ok" >nul
     echo Dependencias instaladas correctamente.
 )
 
@@ -122,8 +124,19 @@ rem  5) Levantar el servidor y abrir el navegador
 rem ============================================================
 echo.
 echo Iniciando Facturacion (ENTORNO REAL)...
-start "" /b "%~dp0venv\Scripts\pythonw.exe" manage.py runserver 0.0.0.0:8000 > "%~dp0server_produccion.log" 2>&1
-timeout /t 3 /nobreak >nul
+start "" /b "%~dp0venv\Scripts\pythonw.exe" manage.py runserver 127.0.0.1:8000 > "%~dp0logs\server_produccion.log" 2>&1
+
+rem Esperar a que el servidor realmente responda antes de abrir el navegador
+set "INTENTOS=0"
+:esperar_servidor
+"%~dp0venv\Scripts\python.exe" -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/', timeout=1).status < 500 else 1)" >nul 2>nul
+if %errorlevel%==0 goto servidor_listo
+set /a INTENTOS+=1
+if %INTENTOS% geq 40 goto servidor_listo
+timeout /t 1 /nobreak >nul
+goto esperar_servidor
+
+:servidor_listo
 start http://127.0.0.1:8000/facturas/
 echo Listo. Esta ventana se puede cerrar.
 timeout /t 3 /nobreak >nul

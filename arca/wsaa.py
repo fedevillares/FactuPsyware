@@ -11,11 +11,6 @@ from cryptography import x509
 from . import config
 
 
-TA_CACHE_PATH = os.path.join(
-    config.BASE_DIR, 'certificados', f'ta_cache_{config.ENTORNO}.json'
-)
-
-
 def generar_tra():
     """Genera el XML del Ticket de Requerimiento de Acceso (TRA)."""
     ahora = datetime.datetime.now()
@@ -37,12 +32,9 @@ def generar_tra():
     return tra
 
 
-def firmar_tra(tra_xml, cert_path=None, key_path=None):
-    """Firma el TRA con el certificado y clave privada, devuelve el CMS en base64.
-    Si no se pasan cert_path/key_path, usa los del entorno activo (config)."""
-    cert_path = cert_path or config.CERT_PATH
-    key_path = key_path or config.KEY_PATH
-
+def firmar_tra(tra_xml, cert_path, key_path):
+    """Firma el TRA con el certificado y clave privada del entorno indicado,
+    devuelve el CMS en base64."""
     with open(key_path, 'rb') as f:
         private_key = serialization.load_pem_private_key(f.read(), password=None)
 
@@ -60,22 +52,14 @@ def firmar_tra(tra_xml, cert_path=None, key_path=None):
     return base64.b64encode(cms).decode('utf-8')
 
 
-def autenticar(datos=None):
-    """Realiza el login contra WSAA, reutilizando el TA cacheado si sigue vigente.
-
-    Si se pasa `datos` (dict con cert_path/key_path/wsaa_url/ta_cache_path,
-    ver arca.config.datos_entorno), autentica contra ese entorno puntual.
-    Si no, usa el entorno activo del proceso (config.ENTORNO)."""
-    if datos is None:
-        cert_path = config.CERT_PATH
-        key_path = config.KEY_PATH
-        wsaa_url = config.WSAA_URL
-        ta_cache_path = TA_CACHE_PATH
-    else:
-        cert_path = datos['cert_path']
-        key_path = datos['key_path']
-        wsaa_url = datos['wsaa_url']
-        ta_cache_path = datos['ta_cache_path']
+def autenticar(datos):
+    """Realiza el login contra WSAA para el entorno indicado, reutilizando
+    el TA cacheado si sigue vigente. `datos` es el dict de
+    arca.config.datos_entorno(entorno) (cert_path/key_path/wsaa_url/ta_cache_path)."""
+    cert_path = datos['cert_path']
+    key_path = datos['key_path']
+    wsaa_url = datos['wsaa_url']
+    ta_cache_path = datos['ta_cache_path']
 
     # Intentar usar el TA cacheado
     if os.path.exists(ta_cache_path):
@@ -100,12 +84,17 @@ def autenticar(datos=None):
     sign = root.findtext('.//sign')
     expiration_str = root.findtext('.//expirationTime')
 
-    # Guardar en caché
+    # Guardar en caché. El token/sign son credenciales de sesión de AFIP:
+    # se restringe el archivo a lectura/escritura solo del dueño.
     with open(ta_cache_path, 'w') as f:
         json.dump({
             'token': token,
             'sign': sign,
             'expiration': expiration_str,
         }, f)
+    try:
+        os.chmod(ta_cache_path, 0o600)
+    except OSError:
+        pass  # chmod no es totalmente fiable en Windows/NTFS, no es fatal
 
     return token, sign

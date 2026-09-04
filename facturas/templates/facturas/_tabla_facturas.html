@@ -1,0 +1,101 @@
+{% if facturas %}
+<div class="card" style="margin-top:14px;">
+    <form method="get" action="{% url 'preparar_envio' %}" id="bulk-form-{{ seccion }}">
+        {% csrf_token %}
+        <div class="table-toolbar">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; text-transform:none; font-size:13px; font-weight:500; color:var(--text-muted); margin:0;">
+                <input type="checkbox" class="select-all-{{ seccion }}" style="margin:0;"
+                       onclick="document.querySelectorAll('.factura-check-{{ seccion }}').forEach(c => c.checked = this.checked);">
+                Seleccionar todo
+            </label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="submit" class="btn btn-outline btn-sm"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Enviar por email</button>
+                <button type="submit" formaction="{% url 'descargar_zip' %}" class="btn btn-outline btn-sm"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg> Descargar ZIP</button>
+            </div>
+        </div>
+        {% if mostrar_boton_eliminar_homologacion %}
+        <div style="padding:0 20px 14px;">
+            <button type="submit" formaction="{% url 'eliminar_facturas_homologacion' %}" formmethod="post" formnovalidate
+                    class="btn btn-danger btn-sm"
+                    onclick="return confirm('Esto va a eliminar TODAS las facturas de HOMOLOGACIÓN (sin validez fiscal). Esta acción no se puede deshacer. ¿Continuar?');">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.75 3h4.5M10.5 3v6.29a1.5 1.5 0 01-.257.84l-4.788 7.033A1.5 1.5 0 006.7 19.5h10.6a1.5 1.5 0 001.245-2.337l-4.788-7.033a1.5 1.5 0 01-.257-.84V3"/></svg>
+                Eliminar todas las facturas de homologación
+            </button>
+        </div>
+        {% endif %}
+        <div class="table-scroll">
+        <table class="tabla-facturas">
+            <thead>
+                <tr>
+                    <th style="width:28px;"></th>
+                    <th>Tipo</th>
+                    <th>Número</th>
+                    <th>Cliente</th>
+                    <th style="text-align:right;">Total</th>
+                    <th>Estado</th>
+                    <th>Cobro</th>
+                    <th>CAE</th>
+                    <th style="width:66px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for factura in facturas %}
+                <tr>
+                    <td>
+                        {% if factura.cae %}
+                        <input type="checkbox" name="ids" value="{{ factura.id }}" class="factura-check-{{ seccion }}">
+                        {% endif %}
+                    </td>
+                    <td>{{ factura.get_tipo_comprobante_display }}</td>
+                    <td class="mono">{{ factura.numero_completo }}</td>
+                    <td style="max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        <a href="{% url 'detalle_factura' factura.id %}" style="font-weight:500;" data-tooltip="{{ factura.cliente.nombre_completo }}">
+                            {{ factura.cliente.nombre_completo }}
+                        </a>
+                    </td>
+                    <td class="mono" style="text-align:right;">${{ factura.total|floatformat:2 }}</td>
+                    <td>
+                        {% if factura.estado == 'AUTORIZADA' %}
+                            <span class="badge badge-success">Autorizada</span>
+                        {% elif factura.estado == 'ERROR' %}
+                            <span class="badge badge-danger">Error</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Borrador</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if factura.estado == 'AUTORIZADA' %}
+                            {% if factura.pagada %}
+                                <span class="badge badge-success">Pagada</span>
+                                {% if factura.fecha_pago %}
+                                <div class="faint" style="font-size:11px; margin-top:2px;">{{ factura.fecha_pago|date:"d/m/Y" }}</div>
+                                {% endif %}
+                            {% elif factura.esta_vencida %}
+                                <span class="badge badge-danger" data-tooltip="Venció el {{ factura.fecha_vto_pago|date:'d/m/Y' }} sin pagar">Vencida</span>
+                                <div style="font-size:11px; color:var(--danger); margin-top:2px;">{{ factura.fecha_vto_pago|date:"d/m/Y" }}</div>
+                                <a href="{% url 'detalle_factura' factura.id %}#cobro" style="font-size:11px;">Registrar →</a>
+                            {% else %}
+                                <span class="badge badge-secondary">Pendiente</span>
+                                <div style="margin-top:2px;"><a href="{% url 'detalle_factura' factura.id %}#cobro" style="font-size:11px;">Registrar →</a></div>
+                            {% endif %}
+                        {% else %}
+                            <span class="faint">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="mono faint" style="font-size:12px;">{{ factura.cae|default:"—" }}</td>
+                    <td>{% spaceless %}<div class="col-acciones">
+                        <a href="{% url 'detalle_factura' factura.id %}" class="btn btn-outline btn-icon" title="Ver factura" aria-label="Ver factura"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><circle cx="12" cy="12" r="3"/></svg></a>{% if factura.cae %}<a href="{% url 'comprobante_factura' factura.id %}" class="btn btn-outline btn-icon" target="_blank" title="Abrir PDF" aria-label="Abrir PDF"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12h6m-6 4h4M7 21h10a2 2 0 002-2V7.914a2 2 0 00-.586-1.414l-3.914-3.914A2 2 0 0013.086 2H7a2 2 0 00-2 2v15a2 2 0 002 2z"/></svg></a>{% endif %}</div>{% endspaceless %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </form>
+</div>
+{% else %}
+<div class="card" style="margin-top:14px;">
+    <div class="empty-state">
+        <p>No hay facturas en este apartado.</p>
+    </div>
+</div>
+{% endif %}

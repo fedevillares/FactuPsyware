@@ -8,13 +8,31 @@ from . import config
 def generar_qr_base64(factura):
     """Genera el QR exigido por ARCA (RG 4291) y devuelve la imagen en base64 para insertar en HTML."""
     cliente = factura.cliente
-    doc_tipo = int(cliente.tipo_documento)
+
+    # tipo_documento guarda el código numérico AFIP como string ('80'=CUIT, '96'=DNI, etc.)
+    # Por precaución, mapeamos también el texto por si algún registro quedó mal guardado.
+    TIPO_DOC_TEXTO_A_CODIGO = {
+        'CUIT': 80, 'CUIL': 86, 'DNI': 96, 'PASAPORTE': 89,
+        'CI': 87, 'EXTERIOR': 99,
+    }
+    try:
+        doc_tipo = int(cliente.tipo_documento)
+    except (ValueError, TypeError):
+        doc_tipo = TIPO_DOC_TEXTO_A_CODIGO.get(
+            str(cliente.tipo_documento).upper().strip(), 96
+        )
 
     if doc_tipo == 99:
         doc_nro = 0
     else:
         doc_nro_str = cliente.numero_documento.replace('-', '').replace('.', '').strip()
-        doc_nro = int(doc_nro_str) if doc_nro_str else 0
+        # Si el documento quedó con letras (ej. pasaporte editado después de
+        # autorizar), no se puede romper la generación del comprobante: se
+        # informa 0 (sin identificar), igual que hace AFIP para doc_tipo 99.
+        try:
+            doc_nro = int(doc_nro_str) if doc_nro_str else 0
+        except ValueError:
+            doc_nro = 0
 
     datos = {
         "ver": 1,

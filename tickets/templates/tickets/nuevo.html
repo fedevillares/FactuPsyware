@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nuevo ticket — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:640px;">
+        <a href="{% url 'listado_tickets' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver a tickets</a>
+
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Soporte técnico</p>
+                <h1 class="page-title" style="margin:0;">Nuevo ticket</h1>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-bottom:16px;">{{ error }}</div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{% url 'nuevo_ticket' %}" onsubmit="return marcarCargando(this)">
+                    {% csrf_token %}
+                    <div class="field">
+                        <label for="cliente">Empresa / cliente</label>
+                        <select id="cliente" name="cliente" required onchange="autocompletarContacto()">
+                            <option value="">— Elegí una empresa —</option>
+                            {% for c in clientes %}
+                            <option value="{{ c.id }}"
+                                    data-nombre="{{ c.contacto_soporte_nombre|default:'' }}"
+                                    data-email="{{ c.contacto_soporte_email|default:'' }}"
+                                    {% if cliente_id == c.id|stringformat:'s' %}selected{% endif %}>
+                                {{ c.nombre_completo }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <p style="margin:6px 0 0; font-size:12px; color:var(--text-faint);">
+                            El contacto de soporte se completa solo desde la ficha del cliente. Podés cambiarlo abajo.
+                        </p>
+                    </div>
+                    <div class="field">
+                        <label for="titulo">Título</label>
+                        <input type="text" id="titulo" name="titulo" value="{{ titulo|default:'' }}" required maxlength="200">
+                    </div>
+                    <div class="field">
+                        <label for="descripcion">Descripción</label>
+                        <textarea id="descripcion" name="descripcion" rows="5" required>{{ descripcion|default:'' }}</textarea>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="field">
+                            <label for="contacto_nombre">Contacto técnico</label>
+                            <input type="text" id="contacto_nombre" name="contacto_nombre" value="{{ contacto_nombre|default:'' }}" maxlength="200">
+                        </div>
+                        <div class="field">
+                            <label for="contacto_email">Email del contacto</label>
+                            <input type="email" id="contacto_email" name="contacto_email" value="{{ contacto_email|default:'' }}">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+                        <button type="submit" class="btn btn-primary btn-lg">Crear y notificar apertura →</button>
+                        <a href="{% url 'listado_tickets' %}" class="btn btn-ghost">Cancelar</a>
+                    </div>
+                    <p style="margin:10px 0 0; font-size:12px; color:var(--text-faint);">
+                        Al crear el ticket vas a poder revisar y editar el email de apertura antes de enviarlo.
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function autocompletarContacto() {
+            const sel = document.getElementById('cliente');
+            const opt = sel.options[sel.selectedIndex];
+            if (!opt || !opt.value) return;
+            const nombre = document.getElementById('contacto_nombre');
+            const email = document.getElementById('contacto_email');
+            // Solo autocompleta si el campo está vacío, para no pisar lo que escribió el usuario.
+            if (!nombre.value) nombre.value = opt.dataset.nombre || '';
+            if (!email.value) email.value = opt.dataset.email || '';
+        }
+    </script>
+</body>
+</html>

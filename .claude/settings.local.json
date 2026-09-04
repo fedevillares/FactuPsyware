@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv\\\\Scripts\\\\python.exe -c \"import django; print\\(django.VERSION\\)\")",
+      "Bash(python -c \"import django; print\\(django.VERSION\\)\")"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Iniciar sesión</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
+    <button class="theme-toggle" onclick="toggleTheme()" style="position:absolute; top:16px; right:16px;" aria-label="Cambiar tema">
+        <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
+        <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 3v2.25M12 18.75V21M4.219 4.219l1.591 1.591M18.19 18.19l1.591 1.591M3 12h2.25M18.75 12H21M4.219 19.781l1.591-1.591M18.19 5.81l1.591-1.591"/></svg>
+    </button>
+
+    <div class="card" style="width:100%; max-width:380px; box-shadow:var(--shadow-lg);">
+        <div class="card-body" style="padding:32px 30px;">
+            <div style="text-align:center; margin-bottom:22px;">
+                {% if empresa_config.logo %}
+                <img src="{{ empresa_config.logo.url }}" alt="logo" style="max-height:56px; max-width:100%; height:auto;">
+                {% else %}
+                <img src="{% static 'img/logo.png' %}" alt="logo" style="max-height:56px; max-width:100%; height:auto;">
+                {% endif %}
+                <p class="faint" style="margin:14px 0 0; font-size:13px;">Ingresá para gestionar tu facturación</p>
+            </div>
+            {% if form.errors %}
+            <div class="alert alert-danger">Usuario o contraseña incorrectos.</div>
+            {% endif %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="field">
+                    <label for="{{ form.username.id_for_label }}">Usuario</label>
+                    {{ form.username }}
+                </div>
+                <div class="field">
+                    <label for="{{ form.password.id_for_label }}">Contraseña</label>
+                    {{ form.password }}
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:6px;">Ingresar</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

@@ -162,6 +162,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 }
 .app-nav a:hover { color: var(--text); text-decoration: none; background: var(--bg-hover); }
 .app-nav a.active { color: var(--accent); background: var(--success-tint); font-weight: 600; }
+.nav-logout-form { display: inline-flex; margin: 0; }
 @media (max-width: 768px) {
     .app-nav { display: none; }
 }

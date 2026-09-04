@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iniciando FactuPsyware…</title>
+<style>
+    :root {
+        --bg: #FAF8F3;
+        --bg-card: #FFFFFF;
+        --text: #21241F;
+        --text-muted: #55584A;
+        --text-faint: #696C59;
+        --accent: #2B4734;
+        --accent-soft: #3C5E48;
+        --secondary: #8C8470;
+        --border: #E6E1D2;
+        --shadow-lg: 0 12px 32px rgba(33, 36, 31, 0.12);
+        --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg: #14160F;
+            --bg-card: #1B1E15;
+            --text: #ECE9DE;
+            --text-muted: #ADAD96;
+            --text-faint: #97937A;
+            --accent: #8FB89C;
+            --accent-soft: #7AA588;
+            --secondary: #767259;
+            --border: #2E3226;
+            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+        }
+    }
+    * { box-sizing: border-box; }
+    html, body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg);
+        font-family: var(--font);
+        color: var(--text);
+    }
+    body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .card {
+        width: 320px;
+        max-width: calc(100vw - 48px);
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--shadow-lg);
+        padding: 40px 32px;
+        text-align: center;
+    }
+    .loader-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 48px;
+        margin: 0 0 18px;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--text);
+        user-select: none;
+    }
+    .loader {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        z-index: 1;
+        background-color: transparent;
+        mask: repeating-linear-gradient(90deg, transparent 0, transparent 6px, black 7px, black 8px);
+    }
+    .loader::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-image:
+            radial-gradient(circle at 50% 50%, var(--accent) 0%, transparent 50%),
+            radial-gradient(circle at 45% 45%, var(--accent-soft) 0%, transparent 45%),
+            radial-gradient(circle at 55% 55%, var(--secondary) 0%, transparent 45%),
+            radial-gradient(circle at 45% 55%, var(--accent) 0%, transparent 45%),
+            radial-gradient(circle at 55% 45%, var(--accent-soft) 0%, transparent 45%);
+        mask: radial-gradient(circle at 50% 50%, transparent 0%, transparent 10%, black 25%);
+        animation: transform-animation 2s infinite alternate, opacity-animation 4s infinite;
+        animation-timing-function: cubic-bezier(0.6, 0.8, 0.5, 1);
+    }
+    @keyframes transform-animation { 0% { transform: translate(-55%); } 100% { transform: translate(55%); } }
+    @keyframes opacity-animation { 0%, 100% { opacity: 0; } 15% { opacity: 1; } 65% { opacity: 0; } }
+    .loader-letter {
+        display: inline-block;
+        opacity: 0;
+        animation: loader-letter-anim 4s infinite linear;
+        z-index: 2;
+    }
+    @keyframes loader-letter-anim {
+        0% { opacity: 0; }
+        5% { opacity: 1; text-shadow: 0 0 6px var(--accent); transform: scale(1.1) translateY(-2px); }
+        20% { opacity: 0.2; }
+        100% { opacity: 0; }
+    }
+    .estado {
+        margin: 0;
+        font-size: 13.5px;
+        color: var(--text-muted);
+        min-height: 18px;
+        transition: opacity .2s ease;
+    }
+    .estado.cambiando { opacity: 0; }
+</style>
+</head>
+<body>
+    <div class="card">
+        <div class="loader-wrapper" role="img" aria-label="Iniciando FactuPsyware">
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.100s">F</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.205s">A</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.310s">C</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.415s">T</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.521s">U</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.626s">P</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.731s">S</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.837s">Y</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:0.942s">W</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:1.047s">A</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:1.152s">R</span>
+            <span class="loader-letter" aria-hidden="true" style="animation-delay:1.257s">E</span>
+            <div class="loader"></div>
+        </div>
+        <p class="estado" id="estado">Conectando…</p>
+    </div>
+
+<script>
+    var ESTADO_URL = 'http://127.0.0.1:8765/estado';
+    var DESTINO = 'http://127.0.0.1:8000/facturas/';
+    var el = document.getElementById('estado');
+    var ultimoMensaje = null;
+
+    function actualizarEstado() {
+        fetch(ESTADO_URL, { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.mensaje && data.mensaje !== ultimoMensaje) {
+                    ultimoMensaje = data.mensaje;
+                    el.classList.add('cambiando');
+                    setTimeout(function () {
+                        el.textContent = data.mensaje;
+                        el.classList.remove('cambiando');
+                    }, 200);
+                }
+            })
+            .catch(function () {});
+    }
+    actualizarEstado();
+    setInterval(actualizarEstado, 800);
+
+    (function intentarConectar() {
+        fetch(DESTINO, { mode: 'no-cors', cache: 'no-store' })
+            .then(function () { window.location.replace(DESTINO); })
+            .catch(function () { setTimeout(intentarConectar, 700); });
+    })();
+</script>
+</body>
+</html>

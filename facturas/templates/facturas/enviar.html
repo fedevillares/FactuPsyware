@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Enviar comprobantes — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:640px;">
+        <a href="{% url 'listado_facturas' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver al listado</a>
+
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Compartir por email</p>
+                <h1 class="page-title" style="margin:0;">Enviar comprobante{{ facturas|length|pluralize:",s" }}</h1>
+            </div>
+        </div>
+
+        {% if mensaje %}
+        <div class="alert {% if exito %}alert-success{% else %}alert-danger{% endif %}" style="margin-bottom:16px;">
+            {{ mensaje }}
+        </div>
+        {% endif %}
+
+        <!-- Resumen de lo que se adjunta -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h2 style="font-size:13px; margin:0; color:var(--text-muted);">
+                    {{ facturas|length }} comprobante{{ facturas|length|pluralize:",s" }} a adjuntar
+                </h2>
+            </div>
+            <table style="margin:0;">
+                <tbody>
+                    {% for factura in facturas %}
+                    <tr>
+                        <td style="font-weight:500;">{{ factura.get_tipo_comprobante_display }}</td>
+                        <td class="mono">{{ factura.numero_completo }}</td>
+                        <td>{{ factura.cliente.nombre_completo }}</td>
+                        <td class="mono" style="text-align:right;">${{ factura.total|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Formulario de envío -->
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{% url 'enviar_facturas' %}"
+                      onsubmit="const b=this.querySelector('button[type=submit]'); b.classList.add('loading'); b.disabled=true;">
+                    {% csrf_token %}
+                    {% for id in ids %}
+                    <input type="hidden" name="ids" value="{{ id }}">
+                    {% endfor %}
+
+                    <div class="field">
+                        <label for="destinatario">Email de destino</label>
+                        <input type="email" id="destinatario" name="destinatario"
+                               value="{{ destinatario }}" placeholder="paciente@ejemplo.com" required autofocus>
+                    </div>
+                    <div class="field">
+                        <label for="asunto">Asunto</label>
+                        <input type="text" id="asunto" name="asunto" value="{{ asunto }}">
+                    </div>
+                    <div class="field">
+                        <label for="cuerpo">Mensaje</label>
+                        <textarea id="cuerpo" name="cuerpo" rows="5" placeholder="Hola, adjunto el comprobante correspondiente.">{{ cuerpo }}</textarea>
+                    </div>
+
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="submit" class="btn btn-primary btn-lg"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Enviar</button>
+                        <a href="{% url 'listado_facturas' %}" class="btn btn-ghost">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

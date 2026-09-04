@@ -1,0 +1,75 @@
+{% load static l10n %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% if es_nuevo %}Nuevo servicio{% else %}Editar servicio{% endif %} — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:560px;">
+        <a href="{% url 'listado_servicios' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver a servicios</a>
+
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Catálogo facturable</p>
+                <h1 class="page-title" style="margin:0;">
+                    {% if es_nuevo %}Nuevo servicio{% else %}Editar servicio{% endif %}
+                </h1>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-bottom:16px;">{{ error }}</div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post" onsubmit="return marcarCargando(this)">
+                    {% csrf_token %}
+
+                    <div class="field">
+                        <label for="nombre">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" value="{{ datos.nombre }}" required maxlength="200" autofocus>
+                    </div>
+                    <div class="field">
+                        <label for="descripcion">Descripción</label>
+                        <textarea id="descripcion" name="descripcion" rows="3">{{ datos.descripcion }}</textarea>
+                    </div>
+                    <div class="info-grid">
+                        <div class="field">
+                            <label for="precio_unitario">Precio unitario (sin IVA)</label>
+                            <input type="number" step="0.01" min="0" id="precio_unitario" name="precio_unitario" value="{{ datos.precio_unitario|unlocalize }}" required>
+                        </div>
+                        <div class="field">
+                            <label for="alicuota_iva">Alícuota IVA</label>
+                            <select id="alicuota_iva" name="alicuota_iva" required>
+                                {% for valor, etiqueta in alicuota_choices %}
+                                <option value="{{ valor }}" {% if datos.alicuota_iva == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field" style="margin-bottom:8px;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="checkbox" name="activo" {% if datos.activo %}checked{% endif %} style="margin:0;">
+                            Activo (aparece disponible para facturar)
+                        </label>
+                    </div>
+
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:16px;">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            {% if es_nuevo %}Crear servicio{% else %}Guardar cambios{% endif %}
+                        </button>
+                        <a href="{% url 'listado_servicios' %}" class="btn btn-ghost">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

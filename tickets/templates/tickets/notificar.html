@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Notificar ticket {{ ticket.numero }} — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:640px;">
+        <a href="{% url 'detalle_ticket' ticket.id %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver al ticket</a>
+
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Ticket {{ ticket.numero }} · {{ ticket.cliente.nombre_completo }}</p>
+                <h1 class="page-title" style="margin:0;">Notificar por email</h1>
+            </div>
+        </div>
+
+        {% if mensaje %}
+        <div class="alert {% if exito %}alert-success{% else %}alert-danger{% endif %}" style="margin-bottom:16px;">
+            {{ mensaje }}
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{% url 'notificar_ticket' ticket.id %}"
+                      onsubmit="const b=this.querySelector('button[type=submit]'); b.classList.add('loading'); b.disabled=true;">
+                    {% csrf_token %}
+                    <div class="field">
+                        <label for="destinatario">Email de destino (contacto de soporte)</label>
+                        <input type="email" id="destinatario" name="destinatario"
+                               value="{{ destinatario }}" placeholder="soporte@empresa.com" required autofocus>
+                    </div>
+                    <div class="field">
+                        <label for="asunto">Asunto</label>
+                        <input type="text" id="asunto" name="asunto" value="{{ asunto }}">
+                    </div>
+                    <div class="field">
+                        <label for="cuerpo">Mensaje</label>
+                        <textarea id="cuerpo" name="cuerpo" rows="10">{{ cuerpo }}</textarea>
+                    </div>
+
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            Enviar notificación
+                        </button>
+                        <a href="{% url 'detalle_ticket' ticket.id %}" class="btn btn-ghost">Omitir</a>
+                    </div>
+                    <p style="margin:10px 0 0; font-size:12px; color:var(--text-faint);">
+                        El texto es una sugerencia: podés editarlo antes de enviar. El email sale desde la cuenta configurada en la empresa.
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

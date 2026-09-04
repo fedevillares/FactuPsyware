@@ -1,0 +1,24 @@
+================================================================================
+FACTUPSYWARE — HISTORIAL DE VERSIONES
+================================================================================
+Instrucciones: cada vez que agregues una funcionalidad o cambio importante,
+sumá una entrada nueva ARRIBA de esta línea con fecha y versión. No borres
+las versiones anteriores: esto es el historial completo del proyecto.
+================================================================================
+
+--------------------------------------------------------------------------------
+v1.0 — versión base
+--------------------------------------------------------------------------------
+Funciones base:
+- Gestión de clientes.
+- Configuración de empresa e integración con ARCA (ex AFIP) para
+  facturación electrónica, con certificados propios.
+- Catálogo de servicios facturables.
+- Emisión de facturas con ítems (Factura, FacturaItem).
+- Sistema de tickets de soporte con eventos/seguimiento (Ticket,
+  TicketEvento).
+- Backups del sistema.
+
+Stack: Django (Python) + templates propios.
+
+Ver INFORME.txt para el detalle técnico completo.

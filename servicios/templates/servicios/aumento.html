@@ -1,0 +1,61 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aplicar aumento — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container" style="max-width:560px;">
+        <a href="{% url 'listado_servicios' %}" class="btn btn-ghost btn-sm" style="margin-bottom:16px;">← Volver a servicios</a>
+
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Catálogo facturable</p>
+                <h1 class="page-title" style="margin:0;">Aplicar aumento por inflación</h1>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-bottom:16px;">{{ error }}</div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <p class="section-label">Servicios seleccionados ({{ servicios|length }})</p>
+                <table style="margin-bottom:20px;">
+                    <tbody>
+                        {% for servicio in servicios %}
+                        <tr>
+                            <td>{{ servicio.nombre }}</td>
+                            <td class="mono faint" style="text-align:right;">${{ servicio.precio_unitario|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <form method="post" onsubmit="return marcarCargando(this)">
+                    {% csrf_token %}
+                    {% for id in ids %}
+                    <input type="hidden" name="ids" value="{{ id }}">
+                    {% endfor %}
+                    <div class="field">
+                        <label for="porcentaje">Porcentaje de aumento</label>
+                        <input type="number" step="0.01" id="porcentaje" name="porcentaje" placeholder="Ej: 15" required autofocus>
+                        <p class="field-hint">Se aplica sobre el precio actual de cada servicio seleccionado. Usá un valor negativo para bajar precios.</p>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+                        <button type="submit" class="btn btn-primary btn-lg">Aplicar a {{ servicios|length }} servicio{{ servicios|length|pluralize }}</button>
+                        <a href="{% url 'listado_servicios' %}" class="btn btn-ghost">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -12,3 +12,15 @@ ta_cache*.json
 
 .env
 *.sqlite3-journal
+secret_key.txt
+
+# Backups manuales de la base de datos y exports de datos
+backups/*.sqlite3
+backups/*.json
+backups/*.bak*
+
+# Archivos subidos (logos, etc.) - no versionar contenido de usuario
+media/
+
+# Caché de herramientas de desarrollo
+.playwright-mcp/

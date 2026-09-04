@@ -1,0 +1,106 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Soporte — FactuPsyware</title>
+    <link href="{% static 'css/theme.css' %}" rel="stylesheet">
+    <script src="{% static 'js/theme.js' %}"></script>
+</head>
+<body>
+    {% include "_nav.html" %}
+
+    <div class="app-container">
+        <div class="page-head">
+            <div>
+                <p class="page-eyebrow">Soporte técnico</p>
+                <h1 class="page-title" style="margin:0;">Tickets</h1>
+            </div>
+            <a href="{% url 'nuevo_ticket' %}" class="btn btn-primary">+ Nuevo ticket</a>
+        </div>
+
+        <form method="get" class="filter-bar">
+            <div class="input-icon" style="flex:1; min-width:240px;">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.75"/><path d="M20.25 20.25l-4.85-4.85"/></svg>
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar por título o empresa…"
+                       autocomplete="off" aria-label="Buscar ticket">
+            </div>
+            <select name="estado" class="filter-select" onchange="this.form.submit()" aria-label="Filtrar por estado">
+                <option value="">Todos los estados</option>
+                <option value="PENDIENTE" {% if estado == 'PENDIENTE' %}selected{% endif %}>Pendientes</option>
+                <option value="CERRADO" {% if estado == 'CERRADO' %}selected{% endif %}>Cerrados</option>
+            </select>
+            <button type="submit" class="btn btn-outline btn-sm">Filtrar</button>
+            {% if q or estado %}
+            <a href="{% url 'listado_tickets' %}" class="btn btn-ghost btn-sm">Limpiar</a>
+            {% endif %}
+        </form>
+
+        {% if tickets %}
+        <div class="card" style="margin-top:14px;">
+            <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:70px;">N°</th>
+                        <th>Título</th>
+                        <th>Empresa</th>
+                        <th>Contacto</th>
+                        <th>Inicio</th>
+                        <th>Cierre</th>
+                        <th>Estado</th>
+                        <th style="width:80px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in tickets %}
+                    <tr>
+                        <td class="mono faint">{{ ticket.numero }}</td>
+                        <td>
+                            <a href="{% url 'detalle_ticket' ticket.id %}" style="font-weight:500;">{{ ticket.titulo }}</a>
+                        </td>
+                        <td>{{ ticket.cliente.nombre_completo }}</td>
+                        <td class="faint" style="font-size:13px;">{{ ticket.contacto_nombre|default:"—" }}</td>
+                        <td class="mono" style="font-size:12.5px; white-space:nowrap;">
+                            {{ ticket.fecha_inicio|date:"d/m/Y" }}
+                            <span class="faint" style="display:block; font-size:11px;">{{ ticket.fecha_inicio|date:"H:i" }} hs</span>
+                        </td>
+                        <td class="mono" style="font-size:12.5px; white-space:nowrap;">
+                            {% if ticket.fecha_fin %}
+                                {{ ticket.fecha_fin|date:"d/m/Y" }}
+                                <span class="faint" style="display:block; font-size:11px;">{{ ticket.fecha_fin|date:"H:i" }} hs</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>
+                            {% if ticket.esta_cerrado %}
+                                <span class="badge badge-secondary">Cerrado</span>
+                            {% else %}
+                                <span class="badge badge-success">Pendiente</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right;">
+                            <a href="{% url 'detalle_ticket' ticket.id %}" class="btn btn-outline btn-sm">Ver</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="empty-state">
+                {% if q or estado %}
+                <p>No hay tickets que coincidan con el filtro.</p>
+                <a href="{% url 'listado_tickets' %}" class="btn btn-outline btn-sm">Limpiar filtro</a>
+                {% else %}
+                <p>Todavía no hay tickets de soporte.</p>
+                <a href="{% url 'nuevo_ticket' %}" class="btn btn-primary btn-sm">Crear el primer ticket</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
