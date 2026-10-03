@@ -261,3 +261,46 @@ class UnicidadNumeroTests(TestCase):
                 self.cliente, numero=1, entorno_emision='produccion',
                 estado='AUTORIZADA', cae='222',
             )
+
+
+class NotaCreditoSinCobroTests(TestCase):
+    """Las notas de crédito se saldan en el momento: sin estado de cobro,
+    nunca vencidas, y con vencimiento = hoy (ARCA 10036)."""
+
+    def setUp(self):
+        import datetime
+        self.hoy = datetime.date.today()
+        self.user = User.objects.create_user('tester_nc', password='clave-de-test')
+        self.client.force_login(self.user)
+        self.cliente = crear_cliente()
+        self.original = crear_factura(
+            self.cliente, cae='12345678901234', estado='AUTORIZADA',
+            fecha_vto_pago=self.hoy - datetime.timedelta(days=30),
+        )
+
+    def test_generar_nota_credito_vence_hoy(self):
+        self.client.post(reverse('generar_nota', args=[self.original.id, 'credito']))
+        nota = Factura.objects.get(factura_asociada=self.original)
+        self.assertEqual(nota.fecha_vto_pago, self.hoy)
+
+    def test_nota_credito_nunca_esta_vencida(self):
+        nota = crear_factura(
+            self.cliente, tipo_comprobante='8', estado='AUTORIZADA',
+            fecha_vto_pago=self.hoy.replace(year=self.hoy.year - 1),
+        )
+        self.assertFalse(nota.esta_vencida)
+        self.assertTrue(self.original.esta_vencida)
+
+    def test_detalle_nota_credito_sin_bloque_de_cobro(self):
+        nota = crear_factura(self.cliente, tipo_comprobante='8', estado='AUTORIZADA', cae='999')
+        respuesta = self.client.get(reverse('detalle_factura', args=[nota.id]))
+        self.assertNotContains(respuesta, 'Cobro y retenciones')
+
+    def test_reporte_no_cuenta_nota_credito_como_pendiente(self):
+        nota = crear_factura(self.cliente, tipo_comprobante='8', estado='AUTORIZADA', cae='999')
+        respuesta = self.client.get(reverse('reporte_mensual'), {
+            'mes': nota.fecha_emision.month, 'anio': nota.fecha_emision.year,
+        })
+        self.assertEqual(respuesta.context['cantidad_pendientes'], 1)
+        self.assertEqual(respuesta.context['cantidad_pagadas'], 0)
+        self.assertEqual(respuesta.context['cantidad_notas_credito'], 1)
