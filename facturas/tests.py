@@ -301,6 +301,8 @@ class NotaCreditoSinCobroTests(TestCase):
         respuesta = self.client.get(reverse('reporte_mensual'), {
             'mes': nota.fecha_emision.month, 'anio': nota.fecha_emision.year,
         })
-        self.assertEqual(respuesta.context['cantidad_pendientes'], 1)
-        self.assertEqual(respuesta.context['cantidad_pagadas'], 0)
+        from .templatetags.factura_extras import resumen_cobros
+        cobros = resumen_cobros(respuesta.context['facturas_mes'])
+        self.assertEqual(cobros['cantidad_pendientes'], 1)
+        self.assertEqual(cobros['cantidad_pagadas'], 0)
         self.assertEqual(respuesta.context['cantidad_notas_credito'], 1)

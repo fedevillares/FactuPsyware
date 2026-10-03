@@ -1,4 +1,4 @@
-{% load static %}
+{% load static factura_extras %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -74,26 +74,27 @@
         <div class="card" style="margin-bottom:28px;">
             <div class="card-header"><h2>Cobros del período</h2></div>
             <div class="card-body">
+            {% resumen_cobros facturas_mes as c %}
             <p class="section-label" style="margin-bottom:12px;">Pagadas</p>
             <div class="stat-strip stat-strip-fixed stat-strip-uniform" style="margin-bottom:24px;">
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.25 12.75l4.5 4.5 9-10.5"/></svg></div>
-                <div class="stat-value">{{ cantidad_pagadas }}</div>
+                <div class="stat-value">{{ c.cantidad_pagadas }}</div>
                 <div class="stat-label">Facturas pagadas</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M16.5 6.75c0-1.657-2.015-3-4.5-3s-4.5 1.343-4.5 3 2.015 3 4.5 3 4.5 1.343 4.5 3-2.015 3-4.5 3-4.5-1.343-4.5-3"/></svg></div>
-                <div class="stat-value">${{ neto_pagado|floatformat:2 }}</div>
+                <div class="stat-value">${{ c.neto_pagado|floatformat:2 }}</div>
                 <div class="stat-label">Neto pagado</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 4.5l-15 15M8.25 6.75a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM18.75 17.25a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg></div>
-                <div class="stat-value">${{ iva_pagado|floatformat:2 }}</div>
+                <div class="stat-value">${{ c.iva_pagado|floatformat:2 }}</div>
                 <div class="stat-label">IVA pagado</div>
             </div>
             <div class="stat-card is-accent">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.25 12.75l4.5 4.5 9-10.5"/></svg></div>
-                <div class="stat-value">${{ total_general_pagado|floatformat:2 }}</div>
+                <div class="stat-value">${{ c.total_cobrado|floatformat:2 }}</div>
                 <div class="stat-label">Total cobrado</div>
             </div>
             </div>
@@ -101,22 +102,22 @@
             <div class="stat-strip stat-strip-fixed stat-strip-uniform" style="margin-bottom:24px;">
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M3.75 9.75h16.5M8.25 3v3M15.75 3v3"/></svg></div>
-                <div class="stat-value">{{ cantidad_pendientes }}</div>
+                <div class="stat-value">{{ c.cantidad_pendientes }}</div>
                 <div class="stat-label">Facturas pendientes</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M16.5 6.75c0-1.657-2.015-3-4.5-3s-4.5 1.343-4.5 3 2.015 3 4.5 3 4.5 1.343 4.5 3-2.015 3-4.5 3-4.5-1.343-4.5-3"/></svg></div>
-                <div class="stat-value">${{ neto_pendiente|floatformat:2 }}</div>
+                <div class="stat-value">${{ c.neto_pendiente|floatformat:2 }}</div>
                 <div class="stat-label">Neto por cobrar</div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.5 4.5l-15 15M8.25 6.75a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM18.75 17.25a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg></div>
-                <div class="stat-value">${{ iva_pendiente|floatformat:2 }}</div>
+                <div class="stat-value">${{ c.iva_pendiente|floatformat:2 }}</div>
                 <div class="stat-label">IVA por cobrar</div>
             </div>
             <div class="stat-card is-accent">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.25 12.75l4.5 4.5 9-10.5"/></svg></div>
-                <div class="stat-value">${{ pendiente_cobro|floatformat:2 }}</div>
+                <div class="stat-value">${{ c.total_a_cobrar|floatformat:2 }}</div>
                 <div class="stat-label">Total a cobrar</div>
             </div>
             </div>
@@ -124,7 +125,7 @@
             <div class="stat-strip stat-strip-fixed stat-strip-uniform">
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 15L3.75 9.75 9 4.5M3.75 9.75h9a6.75 6.75 0 016.75 6.75v3"/></svg></div>
-                <div class="stat-value">${{ retenciones|floatformat:2 }}</div>
+                <div class="stat-value">${{ c.retenciones|floatformat:2 }}</div>
                 <div class="stat-label">Retenciones</div>
             </div>
             </div>
