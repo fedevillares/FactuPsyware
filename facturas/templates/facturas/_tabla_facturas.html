@@ -64,7 +64,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if factura.estado == 'AUTORIZADA' %}
+                        {% if factura.estado == 'AUTORIZADA' and not factura.es_nota_credito %}
                             {% if factura.pagada %}
                                 <span class="badge badge-success">Pagada</span>
                                 {% if factura.fecha_pago %}

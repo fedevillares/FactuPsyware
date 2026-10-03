@@ -56,7 +56,7 @@ def listado_facturas(request):
     # sobre la página actual, y sin traer cliente/items (no hacen falta acá).
     metricas = list(
         facturas_base.exclude(entorno_emision='homologacion')
-        .only('estado', 'pagada', 'fecha_vto_pago', 'fecha_emision')
+        .only('estado', 'pagada', 'fecha_vto_pago', 'fecha_emision', 'tipo_comprobante')
     )
     hoy = datetime.date.today()
     cantidad_mes = sum(
@@ -65,7 +65,8 @@ def listado_facturas(request):
     )
     pendientes_cobro = sum(
         1 for f in metricas
-        if f.estado == 'AUTORIZADA' and not f.pagada and not f.esta_vencida
+        if f.estado == 'AUTORIZADA' and not f.es_nota_credito
+        and not f.pagada and not f.esta_vencida
     )
     vencidas = sum(1 for f in metricas if f.esta_vencida)
 
@@ -394,7 +395,9 @@ def generar_nota(request, factura_id, tipo_nota):
         condicion_venta=factura.condicion_venta,
         periodo_desde=factura.periodo_desde,
         periodo_hasta=factura.periodo_hasta,
-        fecha_vto_pago=factura.fecha_vto_pago,
+        # ARCA (10036) rechaza un vencimiento anterior a la fecha del comprobante,
+        # y la nota se emite hoy: no heredar el vencimiento de la factura original.
+        fecha_vto_pago=datetime.date.today(),
     )
 
     for item in factura.items.all():

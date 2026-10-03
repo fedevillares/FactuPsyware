@@ -121,7 +121,8 @@ def solicitar_cae(token, sign, factura, datos):
 
     fch_serv_desde = factura.periodo_desde.strftime('%Y%m%d') if factura.periodo_desde else hoy
     fch_serv_hasta = factura.periodo_hasta.strftime('%Y%m%d') if factura.periodo_hasta else hoy
-    fch_vto_pago = factura.fecha_vto_pago.strftime('%Y%m%d') if factura.fecha_vto_pago else hoy
+    # ARCA (10036): FchVtoPago no puede ser anterior a CbteFch (hoy).
+    fch_vto_pago = max(factura.fecha_vto_pago.strftime('%Y%m%d'), hoy) if factura.fecha_vto_pago else hoy
 
     detalle = {
         'Concepto': concepto,

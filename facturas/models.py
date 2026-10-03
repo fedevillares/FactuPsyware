@@ -135,8 +135,9 @@ class Factura(models.Model):
     @property
     def esta_vencida(self):
         """True si la factura no está pagada y su fecha de vencimiento de pago
-        ya pasó. Sirve para marcar en rojo los comprobantes impagos vencidos."""
-        if self.pagada or not self.fecha_vto_pago:
+        ya pasó. Sirve para marcar en rojo los comprobantes impagos vencidos.
+        Las notas de crédito nunca vencen: se autorizan y se saldan en el momento."""
+        if self.es_nota_credito or self.pagada or not self.fecha_vto_pago:
             return False
         return self.fecha_vto_pago < date.today()
 

@@ -221,7 +221,7 @@
             </div>
         </div>
 
-        {% if factura.estado == 'AUTORIZADA' %}
+        {% if factura.estado == 'AUTORIZADA' and not factura.es_nota_credito %}
         <!-- Cobro y retenciones: seguimiento interno, no aparece en el PDF de ARCA -->
         <div class="card" id="cobro" style="margin-top:20px; scroll-margin-top:16px;">
             <div class="card-header">
