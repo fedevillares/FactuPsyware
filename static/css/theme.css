@@ -497,6 +497,16 @@ html[data-theme="dark"] .theme-toggle-admin .icon-sun { display: inline-block; }
 }
 
 /* ===== Stat strip (resumen rápido en listados) ===== */
+/* Grilla de 4 columnas fijas: usar cuando varias filas de tarjetas deben
+   compartir el mismo ancho de columna aunque una fila tenga menos tarjetas
+   que otra (evita que auto-fit estire las tarjetas de la fila más corta). */
+.stat-strip-fixed { grid-template-columns: repeat(4, 1fr) !important; }
+@media (max-width: 640px) {
+    .stat-strip-fixed { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media print {
+    .no-print, .app-nav { display: none !important; }
+}
 .stat-strip {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -504,6 +514,7 @@ html[data-theme="dark"] .theme-toggle-admin .icon-sun { display: inline-block; }
     margin-bottom: 24px;
 }
 .stat-card {
+    container-type: inline-size;
     position: relative;
     background: var(--bg);
     border: none;
@@ -528,7 +539,9 @@ html[data-theme="dark"] .theme-toggle-admin .icon-sun { display: inline-block; }
 .stat-icon .icon { width: 17px; height: 17px; color: var(--on-accent); }
 .stat-card .stat-value {
     font-family: var(--font-display);
-    font-size: 26px;
+    /* Los montos grandes se achican para entrar en una sola línea en la tarjeta. */
+    font-size: clamp(15px, 12cqi, 26px);
+    white-space: nowrap;
     font-weight: 600;
     line-height: 1.15;
     letter-spacing: -0.015em;

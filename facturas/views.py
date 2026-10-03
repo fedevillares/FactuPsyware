@@ -575,15 +575,40 @@ def reporte_mensual(request):
     total_iva = 0.0
     total_devuelto = 0.0
 
+    cantidad_pagadas = 0
+    neto_pagado = 0.0
+    iva_pagado = 0.0
+    retenciones = 0.0
+    cantidad_pendientes = 0
+    neto_pendiente = 0.0
+    iva_pendiente = 0.0
+
     for f in facturas_mes:
+        signo = -1 if f.es_nota_credito else 1
         if f.es_nota_credito:
             cantidad_notas_credito += 1
-            total_facturado -= f.subtotal
-            total_iva -= f.total_iva
             total_devuelto += f.total
+
+        total_facturado += signo * f.subtotal
+        total_iva += signo * f.total_iva
+
+        # Las notas de crédito no tienen seguimiento de cobro: no cuentan
+        # como pagadas ni como pendientes.
+        if f.es_nota_credito:
+            continue
+        if f.pagada:
+            cantidad_pagadas += 1
+            neto_pagado += f.subtotal
+            iva_pagado += f.total_iva
+            retenciones += float(f.retencion_iva) + float(f.retencion_ganancias)
         else:
-            total_facturado += f.subtotal
-            total_iva += f.total_iva
+            cantidad_pendientes += 1
+            neto_pendiente += f.subtotal
+            iva_pendiente += f.total_iva
+
+    total_general_pagado = neto_pagado + iva_pagado
+    total_general = total_facturado + total_iva
+    pendiente_cobro = neto_pendiente + iva_pendiente
 
     anios_disponibles = sorted(set(
         Factura.objects.filter(estado='AUTORIZADA').values_list('fecha_emision__year', flat=True)
@@ -604,7 +629,16 @@ def reporte_mensual(request):
         'total_facturado': total_facturado,
         'total_iva': total_iva,
         'total_devuelto': total_devuelto,
-        'total_general': total_facturado + total_iva,
+        'total_general': total_general,
+        'cantidad_pagadas': cantidad_pagadas,
+        'neto_pagado': neto_pagado,
+        'iva_pagado': iva_pagado,
+        'total_general_pagado': total_general_pagado,
+        'retenciones': retenciones,
+        'cantidad_pendientes': cantidad_pendientes,
+        'neto_pendiente': neto_pendiente,
+        'iva_pendiente': iva_pendiente,
+        'pendiente_cobro': pendiente_cobro,
         'facturas_mes': facturas_mes,
     })
 
