@@ -555,6 +555,9 @@ html[data-theme="dark"] .theme-toggle-admin .icon-sun { display: inline-block; }
     font-weight: 600;
     margin-top: 6px;
 }
+/* Reporte: todas las tarjetas comparten el mismo tamaño de monto (una sola
+   línea) en vez de variar según el ancho de cada fila. */
+.stat-strip-uniform .stat-card .stat-value { font-size: clamp(14px, 1.45vw, 18px); }
 .stat-card.is-accent { background: linear-gradient(160deg, var(--accent), var(--accent-hover)); box-shadow: var(--shadow-lg); }
 .stat-card.is-accent:hover { box-shadow: var(--shadow-lg); }
 .stat-card.is-accent .stat-icon { background: var(--on-accent); box-shadow: none; }

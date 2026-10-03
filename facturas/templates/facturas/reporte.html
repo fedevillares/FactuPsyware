@@ -39,7 +39,7 @@
         <div class="card" style="margin-bottom:20px;">
             <div class="card-header"><h2>Facturado del período</h2></div>
             <div class="card-body">
-            <div class="stat-strip">
+            <div class="stat-strip stat-strip-uniform">
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M3.75 9.75h16.5M8.25 3v3M15.75 3v3"/></svg></div>
                 <div class="stat-value">{{ cantidad_total }}</div>
@@ -75,7 +75,7 @@
             <div class="card-header"><h2>Cobros del período</h2></div>
             <div class="card-body">
             <p class="section-label" style="margin-bottom:12px;">Pagadas</p>
-            <div class="stat-strip stat-strip-fixed" style="margin-bottom:24px;">
+            <div class="stat-strip stat-strip-fixed stat-strip-uniform" style="margin-bottom:24px;">
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5.25 12.75l4.5 4.5 9-10.5"/></svg></div>
                 <div class="stat-value">{{ cantidad_pagadas }}</div>
@@ -98,7 +98,7 @@
             </div>
             </div>
             <p class="section-label" style="margin-bottom:12px;">Pendientes</p>
-            <div class="stat-strip stat-strip-fixed" style="margin-bottom:24px;">
+            <div class="stat-strip stat-strip-fixed stat-strip-uniform" style="margin-bottom:24px;">
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M3.75 9.75h16.5M8.25 3v3M15.75 3v3"/></svg></div>
                 <div class="stat-value">{{ cantidad_pendientes }}</div>
@@ -121,7 +121,7 @@
             </div>
             </div>
             <p class="section-label" style="margin-bottom:12px;">Retenciones</p>
-            <div class="stat-strip stat-strip-fixed">
+            <div class="stat-strip stat-strip-fixed stat-strip-uniform">
             <div class="stat-card">
                 <div class="stat-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 15L3.75 9.75 9 4.5M3.75 9.75h9a6.75 6.75 0 016.75 6.75v3"/></svg></div>
                 <div class="stat-value">${{ retenciones|floatformat:2 }}</div>
