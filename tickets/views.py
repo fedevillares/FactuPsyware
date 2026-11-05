@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.db import models
+from django.contrib import messages
 
 from clientes.models import Cliente
 from .models import Ticket, TicketEvento
@@ -24,11 +25,26 @@ def listado_tickets(request):
     if estado in dict(Ticket.ESTADOS):
         tickets = tickets.filter(estado=estado)
 
+    from arca.models import EmpresaConfig
     return render(request, 'tickets/listado.html', {
         'tickets': tickets,
         'q': q,
         'estado': estado,
+        'recepcion_activa': EmpresaConfig.get_config().soporte_recepcion_activa,
     })
+
+
+@login_required
+@require_POST
+def revisar_correo(request):
+    """Botón "Revisar correo ahora": procesa la bandeja de soporte en el momento."""
+    from .correo_entrante import revisar_bandeja
+    resultado = revisar_bandeja()
+    if resultado.error:
+        messages.error(request, resultado.resumen())
+    else:
+        messages.success(request, resultado.resumen())
+    return redirect('listado_tickets')
 
 
 @login_required

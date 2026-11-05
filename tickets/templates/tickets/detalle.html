@@ -44,6 +44,15 @@
                         <div class="label">Apertura</div>
                         <div class="value">{{ ticket.fecha_inicio|date:"d/m/Y" }} <span style="color:var(--text-muted);">· {{ ticket.fecha_inicio|date:"H:i" }} hs</span></div>
                     </div>
+                    {% if ticket.origen == 'EMAIL' %}
+                    <div>
+                        <div class="label">Origen</div>
+                        <div class="value">Correo de {{ ticket.email_remitente }}</div>
+                        <div style="font-size:12.5px; color:var(--text-muted); margin-top:3px;">
+                            {% if ticket.acuse_enviado %}Acuse «TICKET recibido» enviado el {{ ticket.acuse_enviado|date:"d/m/Y H:i" }} hs{% else %}Acuse «TICKET recibido» pendiente de envío{% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
                     {% if ticket.fecha_fin %}
                     <div>
                         <div class="label">Cierre</div>

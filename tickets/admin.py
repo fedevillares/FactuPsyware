@@ -15,7 +15,7 @@ class TicketAdmin(admin.ModelAdmin):
     inlines = [TicketEventoInline]
     list_display = ('numero', 'titulo', 'cliente', 'estado', 'fecha_inicio', 'fecha_fin')
     list_display_links = ('numero', 'titulo')
-    list_filter = ('estado',)
+    list_filter = ('estado', 'origen')
     search_fields = ('titulo', 'descripcion', 'cliente__nombre_completo', 'contacto_email')
     ordering = ('-creado',)
     list_per_page = 50
@@ -32,8 +32,12 @@ class TicketAdmin(admin.ModelAdmin):
         ('Fechas', {
             'fields': ('fecha_inicio', 'fecha_fin'),
         }),
+        ('Correo entrante', {
+            'fields': ('origen', 'email_remitente', 'email_fecha', 'acuse_enviado'),
+            'classes': ('collapse',),
+        }),
     )
-    readonly_fields = ('fecha_inicio',)
+    readonly_fields = ('fecha_inicio', 'origen', 'email_remitente', 'email_fecha', 'acuse_enviado')
 
     @admin.display(description='N°')
     def numero(self, obj):
