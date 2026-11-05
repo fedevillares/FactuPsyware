@@ -62,13 +62,17 @@ class CuentaCorreo:
 
 
 def conexion_smtp_cuenta(cuenta):
+    # Puerto 465 = SSL directo (típico de hostings cPanel); 587 = STARTTLS.
+    # Django no permite ambos a la vez, así que el puerto decide.
+    ssl_directo = cuenta.smtp_port == 465
     return get_connection(
         backend='django.core.mail.backends.smtp.EmailBackend',
         host=cuenta.smtp_host,
         port=cuenta.smtp_port,
         username=cuenta.usuario,
         password=cuenta.password,
-        use_tls=cuenta.smtp_tls,
+        use_tls=cuenta.smtp_tls and not ssl_directo,
+        use_ssl=ssl_directo,
         timeout=TIMEOUT_SMTP_SEGUNDOS,
     )
 

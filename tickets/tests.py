@@ -268,3 +268,24 @@ class HiloTests(TestCase):
             self.assertIn('Ya se está revisando', revisar_bandeja().error)
         finally:
             correo_entrante._lock.release()
+
+
+class ErroresImapTests(TestCase):
+    def _cuenta(self, host='imap.gmail.com'):
+        from arca.mailer import CuentaCorreo
+        return CuentaCorreo('fernando@psyware.ar', 'x', 'F', 'smtp.gmail.com', 587, True, host, 993)
+
+    def test_lookup_failed_en_gmail_sugiere_servidor_del_hosting(self):
+        from .correo_entrante import explicar_error_imap
+        import imaplib
+        ayuda = explicar_error_imap(imaplib.IMAP4.error("b'Lookup failed 956f'"), self._cuenta())
+        self.assertIn('mail.psyware.ar', ayuda)
+
+    def test_smtp_465_usa_ssl_directo(self):
+        from arca.mailer import CuentaCorreo, conexion_smtp_cuenta
+        c = conexion_smtp_cuenta(CuentaCorreo('a@b.ar', 'x', '', 'mail.b.ar', 465, True, 'mail.b.ar', 993))
+        self.assertTrue(c.use_ssl)
+        self.assertFalse(c.use_tls)
+        c = conexion_smtp_cuenta(CuentaCorreo('a@b.ar', 'x', '', 'mail.b.ar', 587, True, 'mail.b.ar', 993))
+        self.assertTrue(c.use_tls)
+        self.assertFalse(c.use_ssl)

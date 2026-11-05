@@ -245,6 +245,9 @@ def revisar_bandeja():
         except (imaplib.IMAP4.error, OSError, ssl.SSLError) as exc:
             resultado.error = (f"No se pudo leer la bandeja de {cuenta.usuario} "
                                f"({cuenta.imap_host}:{cuenta.imap_port}): {exc}")
+            ayuda = explicar_error_imap(exc, cuenta)
+            if ayuda:
+                resultado.error += f" — {ayuda}"
             logger.warning(resultado.error)
 
         # Envía los acuses de los tickets recién creados y reintenta los que
@@ -257,6 +260,28 @@ def revisar_bandeja():
         return resultado
     finally:
         _lock.release()
+
+
+def explicar_error_imap(exc, cuenta):
+    """Traduce los errores IMAP más comunes a una indicación concreta."""
+    texto = str(exc).lower()
+    dominio = cuenta.usuario.rsplit('@', 1)[-1].lower() if '@' in cuenta.usuario else ''
+    es_gmail = 'gmail' in (cuenta.imap_host or '').lower()
+    if 'lookup failed' in texto and es_gmail:
+        return (f"Gmail no encuentra esa cuenta: el correo de @{dominio} no está alojado en Google. "
+                f"Cargá en 'Servidor IMAP' el servidor de tu hosting (suele ser mail.{dominio}, puerto 993) "
+                f"y en 'Servidor SMTP' el mismo servidor (puerto 465 o 587).")
+    if 'authenticationfailed' in texto or 'invalid credentials' in texto or 'login failed' in texto:
+        if es_gmail:
+            return ("Usuario o contraseña incorrectos. En Gmail hace falta una 'contraseña de aplicación' "
+                    "y tener IMAP habilitado.")
+        return "Usuario o contraseña incorrectos para esa casilla."
+    if isinstance(exc, ssl.SSLCertVerificationError) or 'certificate verify failed' in texto:
+        return ("El certificado del servidor no coincide con ese nombre. Usá el nombre de servidor que "
+                "indica tu hosting en la configuración de correo (a veces es el del servidor, no mail.<dominio>).")
+    if isinstance(exc, (TimeoutError, ConnectionRefusedError)) or 'timed out' in texto:
+        return "El servidor no responde: revisá el nombre del servidor IMAP, el puerto (993) y la conexión a internet."
+    return ''
 
 
 def _leer_imap(cuenta, resultado):

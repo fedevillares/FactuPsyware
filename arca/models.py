@@ -49,10 +49,10 @@ class EmpresaConfig(models.Model):
     soporte_nombre_remitente = models.CharField(max_length=100, blank=True, default='', verbose_name="Nombre del remitente (soporte)", help_text="Nombre visible en los emails de tickets (ej. 'Soporte Psyware'). Si está vacío, se usa el de facturas o la Razón Social")
     soporte_email = models.EmailField(blank=True, default='', verbose_name="Email de soporte", help_text="Cuenta que envía los emails de tickets y recibe los pedidos de soporte. Si está vacío, se usa la cuenta de facturas")
     soporte_password = models.CharField(max_length=512, blank=True, default='', verbose_name="Contraseña / clave de aplicación (soporte)", help_text="Se guarda cifrada.")
-    soporte_smtp_host = models.CharField(max_length=255, blank=True, default='smtp.gmail.com', verbose_name="Servidor SMTP (soporte)")
-    soporte_smtp_port = models.IntegerField(blank=True, null=True, default=587, verbose_name="Puerto SMTP (soporte)")
+    soporte_smtp_host = models.CharField(max_length=255, blank=True, default='smtp.gmail.com', verbose_name="Servidor SMTP (soporte)", help_text="Gmail: smtp.gmail.com. Dominio propio en un hosting: el servidor del hosting (ej. mail.tudominio.com)")
+    soporte_smtp_port = models.IntegerField(blank=True, null=True, default=587, verbose_name="Puerto SMTP (soporte)", help_text="587 = TLS (STARTTLS). 465 = SSL directo (se detecta solo por el puerto)")
     soporte_smtp_tls = models.BooleanField(default=True, verbose_name="Usar TLS (soporte)")
-    soporte_imap_host = models.CharField(max_length=255, blank=True, default='imap.gmail.com', verbose_name="Servidor IMAP (recepción)")
+    soporte_imap_host = models.CharField(max_length=255, blank=True, default='imap.gmail.com', verbose_name="Servidor IMAP (recepción)", help_text="Gmail: imap.gmail.com. Dominio propio en un hosting: el servidor del hosting (ej. mail.tudominio.com)")
     soporte_imap_port = models.IntegerField(blank=True, null=True, default=993, verbose_name="Puerto IMAP (SSL)")
     soporte_recepcion_activa = models.BooleanField(default=False, verbose_name="Abrir tickets automáticamente desde el correo", help_text="Revisa la bandeja de entrada cada minuto. Solo se abren tickets de correos enviados desde el 'Email de soporte' de algún cliente y con asunto 'TICKET DE SOPORTE'. Para Gmail hay que tener IMAP habilitado.")
 
