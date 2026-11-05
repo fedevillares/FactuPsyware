@@ -1,17 +1,16 @@
 """Notificaciones por email de la ticketera.
 
-Usa la misma cuenta SMTP configurada en EmpresaConfig (la que envía las
-facturas), pero el destinatario es el contacto de soporte del cliente.
+Usa la cuenta de soporte de EmpresaConfig (`cuenta_soporte()`); si no se
+cargó una cuenta de soporte propia, cae en la cuenta de facturas. El
+destinatario es el contacto de soporte del cliente.
 """
 from django.core.mail import EmailMessage
 from django.utils import timezone
 
 from arca.models import EmpresaConfig
-from arca.mailer import (
-    empresa_tiene_email_configurado,
-    conexion_smtp,
-    mensaje_error_envio,
-)
+from arca.mailer import conexion_smtp_cuenta, mensaje_error_envio_cuenta
+
+ASUNTO_ACUSE = "TICKET recibido"
 
 SIN_CUENTA = ("No hay una cuenta de email configurada. Configurala en el panel de "
               "administración (Configuración de la empresa).")
@@ -71,22 +70,62 @@ def cuerpo_sugerido(ticket, tipo):
     )
 
 
-def enviar_notificacion_ticket(destinatario, asunto, cuerpo):
+def enviar_notificacion_ticket(destinatario, asunto, cuerpo, headers=None):
     """Envía la notificación del ticket. Devuelve (exito, mensaje)."""
-    empresa = EmpresaConfig.get_config()
-    if not empresa_tiene_email_configurado(empresa):
+    cuenta = EmpresaConfig.get_config().cuenta_soporte()
+    if not cuenta.configurada:
         return False, SIN_CUENTA
 
-    connection = conexion_smtp(empresa)
     email = EmailMessage(
         subject=asunto,
         body=cuerpo,
-        from_email=empresa.email_from_header(),
+        from_email=cuenta.from_header(),
         to=[destinatario],
-        connection=connection,
+        headers=headers or {},
+        connection=conexion_smtp_cuenta(cuenta),
     )
     try:
         email.send(fail_silently=False)
         return True, f"Notificación enviada a {destinatario}."
     except Exception as exc:
-        return False, mensaje_error_envio(exc, empresa)
+        return False, mensaje_error_envio_cuenta(exc, cuenta)
+
+
+def cuerpo_acuse(ticket):
+    """Respuesta automática a un ticket abierto desde un correo entrante."""
+    saludo = f"Hola {ticket.contacto_nombre}," if ticket.contacto_nombre else "Hola,"
+    recibido = timezone.localtime(ticket.email_fecha or ticket.fecha_inicio).strftime('%d/%m/%Y a las %H:%M')
+    return (
+        f"{saludo}\n\n"
+        f"Ticket recibido N° {ticket.numero}.\n\n"
+        f"Registramos tu pedido de soporte:\n"
+        f"  - Número de ticket: {ticket.numero}\n"
+        f"  - Empresa: {ticket.cliente.nombre_completo}\n"
+        f"  - Asunto: {ticket.titulo}\n"
+        f"  - Recibido el {recibido} hs\n\n"
+        f"Te mantendremos al tanto de su avance. Por favor, mencioná el número "
+        f"{ticket.numero} en cualquier comunicación sobre este tema.\n\n"
+        f"Saludos."
+    )
+
+
+def enviar_acuse_recibo(ticket):
+    """Responde al remitente 'TICKET recibido' con el número del ticket.
+    Si el envío sale bien, marca `acuse_enviado`. Devuelve (exito, mensaje)."""
+    destinatario = ticket.contacto_email or ticket.email_remitente
+    if not destinatario:
+        return False, "El ticket no tiene email de contacto."
+
+    headers = {'Auto-Submitted': 'auto-replied'}
+    if ticket.email_message_id and not ticket.email_message_id.startswith('sin-id:'):
+        # Para que el cliente lo vea en el mismo hilo que su pedido.
+        headers['In-Reply-To'] = ticket.email_message_id
+        headers['References'] = ticket.email_message_id
+
+    exito, mensaje = enviar_notificacion_ticket(
+        destinatario, ASUNTO_ACUSE, cuerpo_acuse(ticket), headers=headers,
+    )
+    if exito:
+        ticket.acuse_enviado = timezone.now()
+        ticket.save(update_fields=['acuse_enviado'])
+    return exito, mensaje

@@ -41,6 +41,21 @@ class EmpresaConfig(models.Model):
     email_port = models.IntegerField(blank=True, null=True, default=587, verbose_name="Puerto SMTP")
     email_use_tls = models.BooleanField(default=True, verbose_name="Usar TLS")
 
+    # ── Cuenta de soporte (ticketera) ──────────────────────────────────────
+    # Cuenta propia para los tickets: envía las notificaciones y además se
+    # revisa por IMAP para abrir tickets automáticamente a partir de los
+    # correos con asunto "TICKET DE SOPORTE" (ver tickets/correo_entrante.py).
+    # Si soporte_email queda vacío, se usa la cuenta de facturas de arriba.
+    soporte_nombre_remitente = models.CharField(max_length=100, blank=True, default='', verbose_name="Nombre del remitente (soporte)", help_text="Nombre visible en los emails de tickets (ej. 'Soporte Psyware'). Si está vacío, se usa el de facturas o la Razón Social")
+    soporte_email = models.EmailField(blank=True, default='', verbose_name="Email de soporte", help_text="Cuenta que envía los emails de tickets y recibe los pedidos de soporte. Si está vacío, se usa la cuenta de facturas")
+    soporte_password = models.CharField(max_length=512, blank=True, default='', verbose_name="Contraseña / clave de aplicación (soporte)", help_text="Se guarda cifrada.")
+    soporte_smtp_host = models.CharField(max_length=255, blank=True, default='smtp.gmail.com', verbose_name="Servidor SMTP (soporte)")
+    soporte_smtp_port = models.IntegerField(blank=True, null=True, default=587, verbose_name="Puerto SMTP (soporte)")
+    soporte_smtp_tls = models.BooleanField(default=True, verbose_name="Usar TLS (soporte)")
+    soporte_imap_host = models.CharField(max_length=255, blank=True, default='imap.gmail.com', verbose_name="Servidor IMAP (recepción)")
+    soporte_imap_port = models.IntegerField(blank=True, null=True, default=993, verbose_name="Puerto IMAP (SSL)")
+    soporte_recepcion_activa = models.BooleanField(default=False, verbose_name="Abrir tickets automáticamente desde el correo", help_text="Revisa la bandeja de entrada cada minuto. Solo se abren tickets de correos enviados desde el 'Email de soporte' de algún cliente y con asunto 'TICKET DE SOPORTE'. Para Gmail hay que tener IMAP habilitado.")
+
     class Meta:
         verbose_name = "Configuración de la empresa"
         verbose_name_plural = "Configuración de la empresa"
@@ -60,6 +75,33 @@ class EmpresaConfig(models.Model):
         modulo: siempre esta cifrado en la base."""
         from .crypto import descifrar
         return descifrar(self.email_password)
+
+    def cuenta_soporte(self):
+        """Cuenta de correo a usar para la ticketera (envío y recepción).
+        Si no se cargó una cuenta de soporte propia, cae en la de facturas."""
+        from .crypto import descifrar
+        from .mailer import CuentaCorreo
+        if self.soporte_email:
+            return CuentaCorreo(
+                usuario=self.soporte_email,
+                password=descifrar(self.soporte_password),
+                nombre=self.soporte_nombre_remitente or self.email_nombre_remitente or self.razon_social,
+                smtp_host=self.soporte_smtp_host or 'smtp.gmail.com',
+                smtp_port=self.soporte_smtp_port or 587,
+                smtp_tls=self.soporte_smtp_tls,
+                imap_host=self.soporte_imap_host or 'imap.gmail.com',
+                imap_port=self.soporte_imap_port or 993,
+            )
+        return CuentaCorreo(
+            usuario=self.email_remitente or '',
+            password=self.email_password_plano,
+            nombre=self.soporte_nombre_remitente or self.email_nombre_remitente or self.razon_social,
+            smtp_host=self.email_host,
+            smtp_port=self.email_port,
+            smtp_tls=self.email_use_tls,
+            imap_host=self.soporte_imap_host or 'imap.gmail.com',
+            imap_port=self.soporte_imap_port or 993,
+        )
 
     def save(self, *args, **kwargs):
         self.pk = 1

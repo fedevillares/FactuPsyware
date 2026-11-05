@@ -17,8 +17,31 @@
                 <p class="page-eyebrow">Soporte técnico</p>
                 <h1 class="page-title" style="margin:0;">Tickets</h1>
             </div>
-            <a href="{% url 'nuevo_ticket' %}" class="btn btn-primary">+ Nuevo ticket</a>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <form method="post" action="{% url 'revisar_correo_tickets' %}" style="margin:0;"
+                      onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Revisando…';">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline"
+                            title="{% if recepcion_activa %}La bandeja de soporte se revisa sola cada minuto. Este botón la revisa ya.{% else %}La recepción automática está desactivada (Configuración de la empresa). Este botón revisa la bandeja una vez.{% endif %}">
+                        Revisar correo ahora
+                    </button>
+                </form>
+                <a href="{% url 'nuevo_ticket' %}" class="btn btn-primary">+ Nuevo ticket</a>
+            </div>
         </div>
+
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %}" style="margin-bottom:12px;">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        <p class="faint" style="font-size:12.5px; margin:0 0 12px;">
+            {% if recepcion_activa %}
+            Recepción automática <strong>activada</strong>: los correos con asunto «TICKET DE SOPORTE» enviados desde el email de soporte de un cliente abren un ticket solos y se responde «TICKET recibido».
+            {% else %}
+            Recepción automática de tickets por correo desactivada (se activa en Configuración de la empresa → Cuenta de soporte).
+            {% endif %}
+        </p>
 
         <form method="get" class="filter-bar">
             <div class="input-icon" style="flex:1; min-width:240px;">
@@ -59,6 +82,7 @@
                         <td class="mono faint">{{ ticket.numero }}</td>
                         <td>
                             <a href="{% url 'detalle_ticket' ticket.id %}" style="font-weight:500;">{{ ticket.titulo }}</a>
+                            {% if ticket.origen == 'EMAIL' %}<span class="badge badge-secondary" style="margin-left:6px;" title="Abierto automáticamente desde un correo">Correo</span>{% endif %}
                         </td>
                         <td>{{ ticket.cliente.nombre_completo }}</td>
                         <td class="faint" style="font-size:13px;">{{ ticket.contacto_nombre|default:"—" }}</td>

@@ -11,6 +11,12 @@ class EmpresaConfigForm(forms.ModelForm):
         help_text="Para Gmail, usar una 'contraseña de aplicación'. Dejar en blanco para no cambiarla — nunca se muestra la guardada.",
     )
 
+    soporte_password = forms.CharField(
+        required=False, widget=forms.PasswordInput(render_value=False),
+        label='Contraseña / clave de aplicación (soporte)',
+        help_text="Dejar en blanco para no cambiarla — nunca se muestra la guardada.",
+    )
+
     class Meta:
         model = EmpresaConfig
         fields = '__all__'
@@ -21,6 +27,13 @@ class EmpresaConfigForm(forms.ModelForm):
         if not nuevo:
             # Sin cambios: conservar el valor cifrado ya guardado.
             return self.instance.email_password
+        return cifrar(nuevo)
+
+    def clean_soporte_password(self):
+        from .crypto import cifrar
+        nuevo = self.cleaned_data.get('soporte_password', '').strip()
+        if not nuevo:
+            return self.instance.soporte_password
         return cifrar(nuevo)
 
 
@@ -43,6 +56,15 @@ class EmpresaConfigAdmin(admin.ModelAdmin):
         ('Envío de facturas por email', {
             'fields': ('email_nombre_remitente', 'email_remitente', 'email_password', 'email_host', 'email_port', 'email_use_tls'),
             'description': 'Datos de la cuenta de correo desde la que se envían las facturas a los clientes. Para Gmail, generar una "contraseña de aplicación" en la configuración de seguridad de la cuenta de Google.',
+        }),
+        ('Cuenta de soporte (tickets): envío y recepción', {
+            'fields': ('soporte_nombre_remitente', 'soporte_email', 'soporte_password',
+                       'soporte_smtp_host', 'soporte_smtp_port', 'soporte_smtp_tls',
+                       'soporte_imap_host', 'soporte_imap_port', 'soporte_recepcion_activa'),
+            'description': 'Cuenta que envía las notificaciones de tickets y que recibe los pedidos de soporte. '
+                           'Si un cliente escribe desde su "Email de soporte" con asunto "TICKET DE SOPORTE", '
+                           'se abre un ticket automáticamente y se le responde "TICKET recibido" con el número. '
+                           'Si el email de soporte queda vacío, se usa la cuenta de facturas.',
         }),
     )
 

@@ -8,6 +8,10 @@ class Ticket(models.Model):
         ('PENDIENTE', 'Pendiente'),
         ('CERRADO', 'Cerrado'),
     ]
+    ORIGENES = [
+        ('MANUAL', 'Carga manual'),
+        ('EMAIL', 'Correo entrante'),
+    ]
 
     cliente = models.ForeignKey(
         Cliente, on_delete=models.PROTECT, related_name='tickets',
@@ -25,6 +29,15 @@ class Ticket(models.Model):
     fecha_inicio = models.DateTimeField(auto_now_add=True, verbose_name="Fecha y hora de inicio")
     fecha_fin = models.DateTimeField(blank=True, null=True, verbose_name="Fecha y hora de cierre")
     creado = models.DateTimeField(auto_now_add=True)
+
+    # Origen del ticket: cargado a mano o abierto solo desde un correo entrante.
+    origen = models.CharField(max_length=6, choices=ORIGENES, default='MANUAL')
+    # Message-ID del correo que originó el ticket: evita abrir dos tickets
+    # por el mismo correo si se procesa dos veces.
+    email_message_id = models.CharField(max_length=500, blank=True, null=True, unique=True, editable=False)
+    email_remitente = models.CharField(max_length=320, blank=True, default='', verbose_name="Remitente del correo")
+    email_fecha = models.DateTimeField(blank=True, null=True, verbose_name="Fecha y hora del correo")
+    acuse_enviado = models.DateTimeField(blank=True, null=True, verbose_name="Acuse 'TICKET recibido' enviado")
 
     class Meta:
         ordering = ['-creado']

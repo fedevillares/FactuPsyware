@@ -177,6 +177,13 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,
             'backupCount': 5,
         },
+        'tickets_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'tickets_correo.log',
+            'formatter': 'verbose',
+            'maxBytes': 5 * 1024 * 1024,
+            'backupCount': 5,
+        },
         'django_file': {
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': LOG_DIR / 'django_errors.log',
@@ -186,6 +193,11 @@ LOGGING = {
         },
     },
     'loggers': {
+        'tickets.correo': {
+            'handlers': ['tickets_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'arca': {
             'handlers': ['arca_file'],
             'level': 'INFO',
