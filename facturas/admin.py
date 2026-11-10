@@ -40,6 +40,11 @@ class FacturaAdmin(admin.ModelAdmin):
         ('Condiciones de venta', {
             'fields': ('condicion_venta', 'periodo_desde', 'periodo_hasta', 'fecha_vto_pago'),
         }),
+        ('Moneda', {
+            'fields': ('moneda', 'cotizacion', 'cotizacion_fuente', 'cotizacion_fecha', 'cancela_misma_moneda'),
+            'classes': ('collapse',),
+            'description': 'Para facturas en pesos dejar moneda ARS y cotización 1.',
+        }),
         ('Notas', {
             'fields': ('observaciones',),
             'classes': ('collapse',),
@@ -79,7 +84,7 @@ class FacturaAdmin(admin.ModelAdmin):
 
     @admin.display(description='Total', ordering='id')
     def total_display(self, obj):
-        return format_html('<span style="font-family:var(--font-mono);">$ {}</span>', f'{obj.total:.2f}')
+        return format_html('<span style="font-family:var(--font-mono);">{} {}</span>', obj.simbolo_moneda, f'{obj.total:.2f}')
 
     def response_add(self, request, obj, post_url_continue=None):
         if '_continue' in request.POST or '_addanother' in request.POST:

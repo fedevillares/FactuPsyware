@@ -86,7 +86,7 @@
                                 <a href="{% url 'detalle_factura' evento.obj.id %}" style="margin-left:6px; font-weight:500;">{{ evento.obj.numero_completo }}</a>
                             </div>
                             <div style="text-align:right;">
-                                <div class="mono" style="font-size:13px; font-weight:600;">${{ evento.obj.total|floatformat:2 }}</div>
+                                <div class="mono" style="font-size:13px; font-weight:600;">{{ evento.obj.simbolo_moneda }} {{ evento.obj.total|floatformat:2 }}</div>
                                 <div class="faint" style="font-size:12px;">{{ evento.fecha|date:"d/m/Y" }}</div>
                             </div>
                             {% else %}

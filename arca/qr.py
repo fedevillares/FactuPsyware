@@ -50,6 +50,13 @@ def generar_qr_base64(factura):
         "codAut": int(factura.cae),
     }
 
+    if factura.es_moneda_extranjera:
+        # Moneda extranjera: importe en la moneda del comprobante, código de
+        # moneda de ARCA ("DOL") y la cotización guardada en la factura.
+        datos["importe"] = float(factura.totales['total'])
+        datos["moneda"] = factura.moneda_arca
+        datos["ctz"] = float(factura.cotizacion)
+
     json_str = json.dumps(datos)
     b64 = base64.b64encode(json_str.encode('utf-8')).decode('utf-8')
     url = f"https://www.afip.gob.ar/fe/qr/?p={b64}"

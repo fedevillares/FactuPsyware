@@ -175,7 +175,8 @@ def ficha_cliente(request, cliente_id):
     lead = Lead.objects.filter(cliente=cliente).prefetch_related('notas').first()
 
     facturas_autorizadas = [f for f in facturas if f.estado == 'AUTORIZADA']
-    total_facturado = sum(f.total for f in facturas_autorizadas)
+    # En pesos: las facturas en dólares se convierten con su cotización guardada.
+    total_facturado = sum(f.total_en_pesos for f in facturas_autorizadas)
     anio_actual = timezone.localdate().year
     facturas_este_anio_count = sum(1 for f in facturas_autorizadas if f.fecha_emision.year == anio_actual)
     tickets_abiertos_count = sum(1 for t in tickets if not t.esta_cerrado)
@@ -280,7 +281,7 @@ def crm_dashboard(request):
     totales_por_cliente = {}
     for factura in facturas_autorizadas:
         totales_por_cliente.setdefault(factura.cliente, 0)
-        totales_por_cliente[factura.cliente] += factura.total
+        totales_por_cliente[factura.cliente] += factura.total_en_pesos
     top_clientes = sorted(totales_por_cliente.items(), key=lambda kv: kv[1], reverse=True)[:10]
 
     return render(request, 'crm/dashboard.html', {

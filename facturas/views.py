@@ -10,7 +10,11 @@ from django.views.decorators.http import require_POST
 from django.core.paginator import Paginator
 from django.db import models, transaction
 from django.db.models import ProtectedError
+from django.conf import settings
+from django.utils import timezone
 from .models import Factura, FacturaItem
+from . import cotizaciones
+from .moneda import redondear_cotizacion
 from clientes.models import Cliente
 from servicios.models import Servicio
 from arca.services import emitir_factura
@@ -90,6 +94,80 @@ def listado_facturas(request):
     })
 
 
+def _datos_moneda_desde_post(request):
+    """Lee moneda y cotización del formulario (nueva factura / actualizar
+    cotización de un borrador) y resuelve qué se guarda en la factura.
+
+    Devuelve (campos, error, pedir_confirmacion_desvio). `campos` son los
+    valores de moneda/cotización listos para asignar al modelo.
+      - Pesos: cotización 1, sin fuente.
+      - Dólares, modo automático: el valor lo trae el servidor desde la API
+        (no se confía en lo que mande el navegador).
+      - Dólares, modo manual: el valor escrito queda como override; si se
+        desvía más de COTIZACION_DESVIO_MAXIMO_PCT de la automática hay que
+        confirmarlo explícitamente.
+    """
+    moneda = request.POST.get('moneda', '').strip() or 'ARS'
+    if moneda not in dict(Factura.MONEDAS):
+        return None, "Elegí una moneda válida.", False
+
+    if moneda == 'ARS':
+        return {
+            'moneda': 'ARS', 'cotizacion': Decimal('1'), 'cotizacion_fuente': '',
+            'cotizacion_fecha': None, 'cancela_misma_moneda': False,
+        }, None, False
+
+    campos = {
+        'moneda': moneda,
+        'cancela_misma_moneda': bool(request.POST.get('cancela_misma_moneda')),
+    }
+
+    if request.POST.get('cotizacion_modo', 'auto') == 'manual':
+        try:
+            cotizacion = redondear_cotizacion(
+                Decimal(request.POST.get('cotizacion', '').strip().replace(',', '.'))
+            )
+        except (InvalidOperation, TypeError):
+            return None, "Para facturar en dólares ingresá la cotización (pesos por 1 dólar).", False
+        if cotizacion <= 0:
+            return None, "La cotización tiene que ser mayor a 0.", False
+        if cotizacion >= 10000:
+            # ARCA admite hasta 4 enteros en MonCotiz.
+            return None, "La cotización no puede tener más de 4 dígitos enteros.", False
+
+        try:
+            referencia = cotizaciones.get_rate()['valor']
+        except cotizaciones.CotizacionNoDisponible:
+            referencia = None
+        if referencia and not request.POST.get('confirmar_desvio'):
+            desvio = cotizaciones.desvio_porcentual(cotizacion, referencia)
+            if desvio > Decimal(str(settings.COTIZACION_DESVIO_MAXIMO_PCT)):
+                return None, (
+                    f"La cotización manual ({cotizacion.normalize():f}) se desvía un {desvio:.1f}% de la "
+                    f"automática ({referencia.normalize():f}). Si es correcta, marcá la casilla de "
+                    f"confirmación y volvé a guardar."
+                ), True
+
+        campos.update({
+            'cotizacion': cotizacion, 'cotizacion_fuente': 'manual',
+            'cotizacion_fecha': timezone.now(),
+        })
+        return campos, None, False
+
+    try:
+        automatica = cotizaciones.get_rate()
+    except cotizaciones.CotizacionNoDisponible:
+        return None, (
+            "No se pudo obtener la cotización automática del dólar. "
+            "Elegí el modo Manual y cargala a mano."
+        ), False
+    campos.update({
+        'cotizacion': automatica['valor'], 'cotizacion_fuente': automatica['fuente'],
+        'cotizacion_fecha': automatica['fecha'],
+    })
+    return campos, None, False
+
+
 def _contexto_nueva_factura(request, extra=None):
     contexto = {
         'clientes': Cliente.objects.order_by('nombre_completo'),
@@ -97,6 +175,10 @@ def _contexto_nueva_factura(request, extra=None):
         'tipos_comprobante': TIPOS_COMPROBANTE_NUEVA_FACTURA,
         'condiciones_venta': Factura.CONDICIONES_VENTA,
         'alicuotas_iva': FacturaItem._meta.get_field('alicuota_iva').choices,
+        'monedas': Factura.MONEDAS,
+        'moneda': 'ARS',
+        'cotizacion_modo': 'auto',
+        'desvio_maximo_pct': settings.COTIZACION_DESVIO_MAXIMO_PCT,
     }
     if extra:
         contexto.update(extra)
@@ -120,6 +202,10 @@ def nueva_factura(request):
             'punto_venta': punto_venta, 'condicion_venta': condicion_venta,
             'periodo_desde': periodo_desde, 'periodo_hasta': periodo_hasta,
             'fecha_vto_pago': fecha_vto_pago, 'observaciones': observaciones,
+            'moneda': request.POST.get('moneda', '').strip() or 'ARS',
+            'cotizacion_modo': request.POST.get('cotizacion_modo', 'auto'),
+            'cotizacion': request.POST.get('cotizacion', '').strip(),
+            'cancela_misma_moneda': bool(request.POST.get('cancela_misma_moneda')),
         }
 
         error = None
@@ -192,6 +278,11 @@ def nueva_factura(request):
         if not error and not items_data:
             error = "Agregá al menos un ítem a la factura."
 
+        campos_moneda = None
+        if not error:
+            campos_moneda, error, pedir_confirmacion_desvio = _datos_moneda_desde_post(request)
+            campos_repoblados['pedir_confirmacion_desvio'] = pedir_confirmacion_desvio
+
         if error:
             return render(request, 'facturas/nueva.html', _contexto_nueva_factura(request, {
                 'error': error, **campos_repoblados,
@@ -207,6 +298,7 @@ def nueva_factura(request):
                 periodo_hasta=periodo_hasta or None,
                 fecha_vto_pago=fecha_vto_pago or None,
                 observaciones=observaciones or None,
+                **campos_moneda,
             )
             for item in items_data:
                 FacturaItem.objects.create(factura=factura, **item)
@@ -219,6 +311,27 @@ def nueva_factura(request):
         'condicion_venta': 'TRANSFERENCIA',
         'tipo_comprobante': '6',
     }))
+
+
+@login_required
+def cotizacion_dolar(request):
+    """Endpoint JSON para el formulario: cotización automática del dólar.
+    `?forzar=1` saltea el cache (botón "Actualizar cotización"). Si no hay
+    forma de obtenerla responde ok=false y el formulario pasa a carga manual."""
+    try:
+        cotizacion = cotizaciones.get_rate(forzar=bool(request.GET.get('forzar')))
+    except cotizaciones.CotizacionNoDisponible as e:
+        return JsonResponse({'ok': False, 'error': str(e)})
+    return JsonResponse({
+        'ok': True,
+        'valor': f"{cotizacion['valor'].normalize():f}",
+        'fuente': cotizacion['fuente'],
+        'tipo': cotizacion['tipo'],
+        'campo': cotizacion['campo'],
+        'fecha': cotizacion['fecha'].isoformat(),
+        'fecha_texto': timezone.localtime(cotizacion['fecha']).strftime('%d/%m/%Y %H:%M'),
+        'desactualizada': cotizacion['desactualizada'],
+    })
 
 
 @login_required
@@ -333,6 +446,37 @@ def actualizar_cobro(request, factura_id):
 
 
 @login_required
+@require_POST
+def actualizar_cotizacion(request, factura_id):
+    """Cambia la cotización de un comprobante en moneda extranjera que todavía
+    no se emitió (borrador o rechazado). Una vez autorizado, la cotización
+    queda fija: el comprobante es inmutable."""
+    factura = _factura_optimizada(factura_id)
+    if factura.estado not in ('BORRADOR', 'ERROR') or not factura.es_moneda_extranjera:
+        return redirect('detalle_factura', factura_id=factura.id)
+
+    datos_post = request.POST.copy()
+    datos_post['moneda'] = factura.moneda
+    request.POST = datos_post
+    campos, error, pedir_confirmacion_desvio = _datos_moneda_desde_post(request)
+    if error:
+        return render(request, 'facturas/detalle.html', {
+            'factura': factura, 'exito': False, 'mensaje': error,
+            'pedir_confirmacion_desvio': pedir_confirmacion_desvio,
+            'cotizacion_ingresada': request.POST.get('cotizacion', '').strip(),
+        })
+
+    for campo, valor in campos.items():
+        setattr(factura, campo, valor)
+    factura.save(update_fields=[*campos.keys(), 'actualizado'])
+
+    return render(request, 'facturas/detalle.html', {
+        'factura': factura, 'exito': True,
+        'mensaje': 'Cotización actualizada.',
+    })
+
+
+@login_required
 def comprobante(request, factura_id):
     """Comprobante oficial post-CAE: PDF igual al emitido por ARCA."""
     from arca.pdf_comprobante import generar_pdf
@@ -398,6 +542,13 @@ def generar_nota(request, factura_id, tipo_nota):
         # ARCA (10036) rechaza un vencimiento anterior a la fecha del comprobante,
         # y la nota se emite hoy: no heredar el vencimiento de la factura original.
         fecha_vto_pago=datetime.date.today(),
+        # La nota se emite en la misma moneda y con la misma cotización que el
+        # comprobante que ajusta (se puede cambiar desde el detalle del borrador).
+        moneda=factura.moneda,
+        cotizacion=factura.cotizacion,
+        cotizacion_fuente=factura.cotizacion_fuente,
+        cotizacion_fecha=factura.cotizacion_fecha,
+        cancela_misma_moneda=factura.cancela_misma_moneda,
     )
 
     for item in factura.items.all():
@@ -569,21 +720,50 @@ def reporte_mensual(request):
         .order_by('-fecha_emision', '-numero')
     )
 
+    # Métricas separadas por moneda (nunca se suman pesos con dólares). Lo
+    # único que mezcla monedas es `total_convertido_ars`, que convierte cada
+    # comprobante con SU cotización guardada.
     cantidad_total = len(facturas_mes)
-    cantidad_notas_credito = 0
-    total_facturado = 0.0
-    total_iva = 0.0
-    total_devuelto = 0.0
+    cero = Decimal('0.00')
+    por_moneda = {}
+    total_convertido_ars = cero
 
     for f in facturas_mes:
+        totales = f.totales
+        # Para la tabla del reporte: evita recalcular en el template.
+        f.total_reporte = totales['total']
+        m = por_moneda.setdefault(f.moneda, {
+            'moneda': f.moneda, 'simbolo': f.simbolo_moneda, 'nombre': f.get_moneda_display(),
+            'cantidad': 0, 'cantidad_notas_credito': 0,
+            'neto_facturado': cero, 'iva': cero, 'devuelto': cero,
+            'neto_cobrado': cero, 'pendiente_cobro': cero,
+            'retenciones': cero, 'total_ars': cero,
+        })
+        m['cantidad'] += 1
+        # Las retenciones se cargan siempre en pesos, sea cual sea la moneda.
+        m['retenciones'] += f.retencion_iva + f.retencion_ganancias
         if f.es_nota_credito:
-            cantidad_notas_credito += 1
-            total_facturado -= f.subtotal
-            total_iva -= f.total_iva
-            total_devuelto += f.total
+            m['cantidad_notas_credito'] += 1
+            m['neto_facturado'] -= totales['neto']
+            m['iva'] -= totales['iva']
+            m['devuelto'] += totales['total']
+            m['total_ars'] -= totales['total_ars']
+            total_convertido_ars -= totales['total_ars']
         else:
-            total_facturado += f.subtotal
-            total_iva += f.total_iva
+            m['neto_facturado'] += totales['neto']
+            m['iva'] += totales['iva']
+            m['total_ars'] += totales['total_ars']
+            total_convertido_ars += totales['total_ars']
+            if f.pagada:
+                m['neto_cobrado'] += totales['neto']
+            else:
+                m['pendiente_cobro'] += totales['total']
+
+    for m in por_moneda.values():
+        m['total_general'] = m['neto_facturado'] + m['iva']
+    # Pesos primero, después el resto.
+    metricas_por_moneda = sorted(por_moneda.values(), key=lambda m: (m['moneda'] != 'ARS', m['moneda']))
+    cantidad_notas_credito = sum(m['cantidad_notas_credito'] for m in metricas_por_moneda)
 
     anios_disponibles = sorted(set(
         Factura.objects.filter(estado='AUTORIZADA').values_list('fecha_emision__year', flat=True)
@@ -601,10 +781,9 @@ def reporte_mensual(request):
         'meses': meses,
         'cantidad_total': cantidad_total,
         'cantidad_notas_credito': cantidad_notas_credito,
-        'total_facturado': total_facturado,
-        'total_iva': total_iva,
-        'total_devuelto': total_devuelto,
-        'total_general': total_facturado + total_iva,
+        'metricas_por_moneda': metricas_por_moneda,
+        'hay_moneda_extranjera': any(m['moneda'] != 'ARS' for m in metricas_por_moneda),
+        'total_convertido_ars': total_convertido_ars,
         'facturas_mes': facturas_mes,
     })
 

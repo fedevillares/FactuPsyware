@@ -28,6 +28,47 @@ def ultimo_comprobante(token, sign, punto_venta, tipo_cbte, datos):
     return response
 
 
+def consultar_cotizacion(token, sign, mon_id, datos, fecha=None):
+    """
+    Consulta la cotización que ARCA tiene registrada para una moneda
+    (FEParamGetCotizacion). `fecha` (date, opcional) es la fecha a consultar;
+    sin fecha devuelve la última. Es la referencia contra la que ARCA valida
+    MonCotiz al autorizar un comprobante en moneda extranjera.
+
+    Devuelve {'ok': True, 'cotizacion': Decimal, 'fecha': 'yyyymmdd'} o
+    {'ok': False, 'error': str}.
+
+    TODO(ARCA): todavía no está conectada a la pantalla (la cotización
+    automática sale de facturas/cotizaciones.py). No se probó contra el
+    webservice real.
+    """
+    from decimal import Decimal
+
+    client = get_client(datos)
+    auth = {
+        'Token': token,
+        'Sign': sign,
+        'Cuit': config.CUIT,
+    }
+    parametros = {'Auth': auth, 'MonId': mon_id}
+    if fecha:
+        parametros['FchCotiz'] = fecha.strftime('%Y%m%d')
+
+    response = client.service.FEParamGetCotizacion(**parametros)
+
+    if getattr(response, 'Errors', None):
+        return {
+            'ok': False,
+            'error': '; '.join(str(e.Code) + ': ' + str(e.Msg) for e in response.Errors.Err),
+        }
+    resultado = response.ResultGet
+    return {
+        'ok': True,
+        'cotizacion': Decimal(str(resultado.MonCotiz)),
+        'fecha': resultado.FchCotiz,
+    }
+
+
 def solicitar_cae(token, sign, factura, datos):
     """
     Solicita el CAE para una Factura (modelo de Django) ya con sus items cargados,
@@ -77,6 +118,33 @@ def solicitar_cae(token, sign, factura, datos):
     imp_neto = round(sum(d['BaseImp'] for d in iva_array), 2)
     imp_iva = round(sum(d['Importe'] for d in iva_array), 2)
     imp_total = round(imp_neto + imp_iva, 2)
+
+    # Moneda extranjera: los importes se informan en la moneda del
+    # comprobante, calculados con Decimal desde facturas/moneda.py (la misma
+    # fuente que usa el PDF), y MonCotiz lleva los pesos por unidad.
+    mon_id = 'PES'
+    mon_cotiz = 1
+    if factura.es_moneda_extranjera:
+        if not factura.cotizacion or factura.cotizacion <= 0:
+            return {
+                'ok': False,
+                'error': 'La factura está en moneda extranjera pero no tiene una cotización válida cargada.',
+            }
+        totales = factura.totales
+        iva_array = [
+            {
+                'Id': int(alicuota['codigo']),
+                'BaseImp': float(alicuota['base']),
+                'Importe': float(alicuota['iva']),
+            }
+            for alicuota in totales['alicuotas'] if alicuota['codigo'] in iva_agrupado
+        ]
+        imp_neto = float(totales['neto'])
+        imp_iva = float(totales['iva'])
+        imp_total = float(totales['total'])
+        mon_id = factura.moneda_arca
+        # MonCotiz: Double (4 enteros + 6 decimales) según el manual WSFEv1.
+        mon_cotiz = float(factura.cotizacion)
 
     hoy = datetime.date.today().strftime('%Y%m%d')
 
@@ -140,11 +208,29 @@ def solicitar_cae(token, sign, factura, datos):
         'ImpOpEx': 0,
         'ImpTrib': 0,
         'ImpIVA': imp_iva,
-        'MonId': 'PES',
-        'MonCotiz': 1,
+        'MonId': mon_id,
+        'MonCotiz': mon_cotiz,
         'CondicionIVAReceptorId': condicion_iva_receptor,
         'Iva': {'AlicIva': iva_array},
     }
+
+    if factura.es_moneda_extranjera:
+        # CanMisMonExt (manual WSFEv1 v4.0+, RG 5616): 'S' si el comprobante se
+        # cancela en la misma moneda extranjera, 'N' si no. Solo se informa
+        # para moneda extranjera (con MonId=PES no debe informarse: obs. 10241).
+        #
+        # Validaciones de ARCA sobre MonCotiz (manual v4.7, rev. 01/09/2026):
+        #  - 10038: con CanMisMonExt='S' la cotización debe coincidir
+        #    EXACTAMENTE con la registrada por ARCA para el día hábil anterior
+        #    (o puede omitirse MonCotiz y ARCA usa la suya).
+        #  - 10119 / 10240: con 'N' la cotización tiene una tolerancia respecto
+        #    de la oficial de ARCA (ver consultar_cotizacion más abajo).
+        # TODO(ARCA): con CanMisMonExt='S' se envía igual la cotización guardada
+        # en la factura (es la que se imprime en el PDF). Si ARCA la rechaza por
+        # 10038, hay que actualizar la cotización del borrador con el valor de
+        # FEParamGetCotizacion. Falta decidir si conviene omitir MonCotiz y
+        # tomar la de ARCA; no se pudo probar contra homologación.
+        detalle['CanMisMonExt'] = 'S' if factura.cancela_misma_moneda else 'N'
 
     # 5. Si es Nota de Crédito/Débito asociada a un comprobante, agregar CbtesAsoc
     if factura.factura_asociada and (factura.es_nota_credito or factura.es_nota_debito):

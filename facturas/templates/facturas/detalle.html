@@ -121,10 +121,10 @@
                         <tr>
                             <td style="font-weight:500;">{{ item.nombre_mostrado }}</td>
                             <td class="mono" style="text-align:right;">{{ item.cantidad }}</td>
-                            <td class="mono" style="text-align:right;">${{ item.precio_unitario|floatformat:2 }}</td>
-                            <td class="mono" style="text-align:right;">${{ item.subtotal|floatformat:2 }}</td>
-                            <td class="mono" style="text-align:right; color:var(--text-muted);">${{ item.iva_monto|floatformat:2 }}</td>
-                            <td class="mono" style="text-align:right; font-weight:600;">${{ item.total|floatformat:2 }}</td>
+                            <td class="mono" style="text-align:right;">{{ factura.simbolo_moneda }} {{ item.precio_unitario|floatformat:2 }}</td>
+                            <td class="mono" style="text-align:right;">{{ factura.simbolo_moneda }} {{ item.subtotal|floatformat:2 }}</td>
+                            <td class="mono" style="text-align:right; color:var(--text-muted);">{{ factura.simbolo_moneda }} {{ item.iva_monto|floatformat:2 }}</td>
+                            <td class="mono" style="text-align:right; font-weight:600;">{{ factura.simbolo_moneda }} {{ item.total|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -138,7 +138,102 @@
                 </div>
                 {% endif %}
 
-                <div class="total-row">${{ factura.total|floatformat:2 }}</div>
+                <div class="total-row">{{ factura.simbolo_moneda }} {{ factura.total|floatformat:2 }}</div>
+
+                {% if factura.es_moneda_extranjera %}
+                <!-- Moneda extranjera: cotización guardada y equivalente en pesos -->
+                {% with totales=factura.totales %}
+                <div id="moneda-extranjera" style="margin-top:14px; padding:12px 14px; background:var(--bg-sunken); border-radius:var(--radius-sm); font-size:13.5px;">
+                    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                        <div>
+                            <div class="label">Moneda</div>
+                            <div class="value">{{ factura.get_moneda_display }} ({{ factura.moneda_arca }})</div>
+                        </div>
+                        <div>
+                            <div class="label">Cotización</div>
+                            <div class="value mono">$ {{ factura.cotizacion_formateada }}</div>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                                {{ factura.cotizacion_fuente_display }}{% if factura.cotizacion_fecha %} — {{ factura.cotizacion_fecha|date:"d/m/Y H:i" }}{% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <div class="label">Cobro</div>
+                            <div class="value">{% if factura.cancela_misma_moneda %}En dólares{% else %}En pesos{% endif %}</div>
+                        </div>
+                    </div>
+                    <table style="margin:12px 0 0;">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th style="text-align:right;">{{ factura.simbolo_moneda }}</th>
+                                <th style="text-align:right;">Equivalente en $</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Neto gravado</td>
+                                <td class="mono" style="text-align:right;">{{ totales.neto|floatformat:2 }}</td>
+                                <td class="mono" style="text-align:right;">{{ totales.neto_ars|floatformat:2 }}</td>
+                            </tr>
+                            {% for alicuota in totales.alicuotas %}{% if alicuota.iva %}
+                            <tr>
+                                <td>IVA {{ alicuota.porcentaje|floatformat:"-1" }}%</td>
+                                <td class="mono" style="text-align:right;">{{ alicuota.iva|floatformat:2 }}</td>
+                                <td class="mono" style="text-align:right;">{{ alicuota.iva_ars|floatformat:2 }}</td>
+                            </tr>
+                            {% endif %}{% endfor %}
+                            <tr style="font-weight:700;">
+                                <td>Total</td>
+                                <td class="mono" style="text-align:right;">{{ totales.total|floatformat:2 }}</td>
+                                <td class="mono" style="text-align:right;">{{ totales.total_ars|floatformat:2 }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {% if factura.estado == 'BORRADOR' or factura.estado == 'ERROR' %}
+                    <form method="post" action="{% url 'actualizar_cotizacion' factura.id %}" style="margin-top:14px;">
+                        {% csrf_token %}
+                        <div id="bloque-cotizacion" data-url="{% url 'cotizacion_dolar' %}" data-moneda="{{ factura.moneda }}">
+                            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:8px;">
+                                <span style="font-weight:600;">Cambiar cotización</span>
+                                <label style="display:flex; align-items:center; gap:6px; font-weight:500; cursor:pointer; margin:0; text-transform:none;">
+                                    <input type="radio" name="cotizacion_modo" value="auto"> Automática
+                                </label>
+                                <label style="display:flex; align-items:center; gap:6px; font-weight:500; cursor:pointer; margin:0; text-transform:none;">
+                                    <input type="radio" name="cotizacion_modo" value="manual" checked> Manual
+                                </label>
+                            </div>
+                            <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                                <div class="field" style="margin:0;">
+                                    <label for="cotizacion">Pesos por 1 dólar</label>
+                                    <input type="number" step="0.000001" min="0.000001" max="9999.999999" id="cotizacion" name="cotizacion"
+                                           value="{% if cotizacion_ingresada %}{{ cotizacion_ingresada }}{% else %}{{ factura.cotizacion|unlocalize }}{% endif %}" style="max-width:200px;">
+                                </div>
+                                <button type="button" class="btn btn-outline btn-sm" id="btn-actualizar-cotizacion">Actualizar cotización</button>
+                                <button type="submit" class="btn btn-primary btn-sm">Guardar cotización</button>
+                            </div>
+                            <p class="field-hint" id="cotizacion-info" style="margin-top:8px;"></p>
+                            <div id="aviso-desvio" class="alert alert-danger" {% if pedir_confirmacion_desvio %}data-forzado="1"{% endif %}
+                                 style="{% if not pedir_confirmacion_desvio %}display:none;{% endif %} margin:8px 0 0;">
+                                <span id="aviso-desvio-texto">La cotización manual se desvía mucho de la automática.</span>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:6px 0 0; text-transform:none;">
+                                    <input type="checkbox" name="confirmar_desvio" value="1" style="margin:0;"> Es correcta, usar igual esta cotización
+                                </label>
+                            </div>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:10px 0 0; text-transform:none; font-weight:500;">
+                                <input type="checkbox" name="cancela_misma_moneda" value="1" style="margin:0;" {% if factura.cancela_misma_moneda %}checked{% endif %}>
+                                El cliente paga en dólares (se informa a ARCA como "cancela en la misma moneda")
+                            </label>
+                        </div>
+                    </form>
+                    {% else %}
+                    <p style="margin:10px 0 0; font-size:12.5px; color:var(--text-faint);">
+                        La cotización quedó fija al emitir el comprobante.
+                    </p>
+                    {% endif %}
+                </div>
+                {% endwith %}
+                {% endif %}
 
                 <!-- Acciones -->
                 <div class="action-bar">
@@ -237,6 +332,7 @@
             <div class="card-body">
                 <p style="margin:0 0 16px; font-size:12.5px; color:var(--text-faint);">
                     Datos internos para tu control de cobranza. No forman parte del comprobante fiscal.
+                    {% if factura.es_moneda_extranjera %}Las retenciones se cargan siempre en pesos.{% endif %}
                 </p>
                 <form method="post" action="{% url 'actualizar_cobro' factura.id %}">
                     {% csrf_token %}
@@ -298,5 +394,6 @@
             return true;
         }
     </script>
+    {% if factura.es_moneda_extranjera %}<script src="{% static 'js/factura_totales.js' %}"></script>{% endif %}
 </body>
 </html>

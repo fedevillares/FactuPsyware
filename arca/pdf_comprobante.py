@@ -446,28 +446,42 @@ def generar_pdf(factura, empresa, otros_impuestos=0,
     # ── Discriminación de IVA según tipo de comprobante (regla AFIP) ──
     # Sólo el tipo A discrimina el IVA en la impresión. Los tipos B y C
     # muestran únicamente los totales (IVA incluido), sin desglose.
-    if letra == "A":
+    # ── Moneda del comprobante ──
+    # En pesos todo sigue igual ("$"). En moneda extranjera los importes van
+    # en esa moneda ("US$"), calculados con Decimal (facturas/moneda.py), y
+    # más abajo se agrega un recuadro con la cotización y el equivalente en $.
+    simb = factura.simbolo_moneda
+    if factura.es_moneda_extranjera:
+        tot_me = factura.totales
+        v_neto, v_iva, v_total = tot_me["neto"], tot_me["iva"], tot_me["total"]
+        desglose = [{"porcentaje": a["porcentaje"], "importe": a["iva"]}
+                    for a in tot_me["alicuotas"]]
+    else:
+        tot_me = None
+        v_neto, v_iva, v_total = factura.subtotal, factura.total_iva, factura.total
         desglose = factura.desglose_iva
+
+    if letra == "A":
         iva_map = {float(a["porcentaje"]): a["importe"] for a in desglose}
         right_rows = [
-            ("Importe Neto Gravado: $",   _fmt(factura.subtotal),          False),
-            ("IVA 27%: $",                _fmt(iva_map.get(27,   0.0)),    False),
-            ("IVA 21%: $",                _fmt(iva_map.get(21,   0.0)),    False),
-            ("IVA 10.5%: $",              _fmt(iva_map.get(10.5, 0.0)),    False),
-            ("IVA 5%: $",                 _fmt(iva_map.get(5,    0.0)),    False),
-            ("IVA 2.5%: $",               _fmt(iva_map.get(2.5,  0.0)),    False),
-            ("IVA 0%: $",                 _fmt(iva_map.get(0,    0.0)),    False),
-            ("Importe Otros Tributos: $", _fmt(otros_impuestos),            False),
-            ("Importe Total: $",          _fmt(factura.total),              True),
+            (f"Importe Neto Gravado: {simb}",   _fmt(v_neto),                False),
+            (f"IVA 27%: {simb}",                _fmt(iva_map.get(27,   0.0)),    False),
+            (f"IVA 21%: {simb}",                _fmt(iva_map.get(21,   0.0)),    False),
+            (f"IVA 10.5%: {simb}",              _fmt(iva_map.get(10.5, 0.0)),    False),
+            (f"IVA 5%: {simb}",                 _fmt(iva_map.get(5,    0.0)),    False),
+            (f"IVA 2.5%: {simb}",               _fmt(iva_map.get(2.5,  0.0)),    False),
+            (f"IVA 0%: {simb}",                 _fmt(iva_map.get(0,    0.0)),    False),
+            (f"Importe Otros Tributos: {simb}", _fmt(otros_impuestos),            False),
+            (f"Importe Total: {simb}",          _fmt(v_total),               True),
         ]
     else:
         # Tipos B y C: sin discriminación de IVA por alícuota, pero se
         # informa el subtotal de IVA total del comprobante.
         right_rows = [
-            ("Subtotal: $",               _fmt(factura.subtotal),           False),
-            ("Subtotal IVA: $",           _fmt(factura.total_iva),          False),
-            ("Importe Otros Tributos: $", _fmt(otros_impuestos),            False),
-            ("Importe Total: $",          _fmt(factura.total),              True),
+            (f"Subtotal: {simb}",               _fmt(v_neto),                False),
+            (f"Subtotal IVA: {simb}",           _fmt(v_iva),                 False),
+            (f"Importe Otros Tributos: {simb}", _fmt(otros_impuestos),            False),
+            (f"Importe Total: {simb}",          _fmt(v_total),               True),
         ]
 
     TOT_ROW_H = 13
@@ -478,7 +492,7 @@ def generar_pdf(factura, empresa, otros_impuestos=0,
     _vline(c, X_TOT_DIV, y_after_items, TOT_H, lw=0.5)
 
     left_center_y = y_after_items + TOT_H / 2 - 4
-    _t(c, ML + 7, left_center_y, "Importe Otros Tributos: $", sz=8)
+    _t(c, ML + 7, left_center_y, f"Importe Otros Tributos: {simb}", sz=8)
     _t(c, X_TOT_DIV - 30, left_center_y, _fmt(otros_impuestos), sz=8, align="R")
 
     RX_LABEL = PW - ML - 95
@@ -493,6 +507,55 @@ def generar_pdf(factura, empresa, otros_impuestos=0,
                    UW - UW * 0.52, lw=0.3, col=colors.HexColor("#999999"))
 
     y_after_tot = y_after_items + TOT_H
+
+    # ══════════════════════════════════════════════════════════════════
+    # 7.5 MONEDA EXTRANJERA: cotización y equivalente en pesos
+    # Solo aparece si el comprobante no está en pesos.
+    # ══════════════════════════════════════════════════════════════════
+    if tot_me is not None:
+        from django.utils import timezone as _tz
+        cot_txt = factura.cotizacion_formateada
+
+        if letra == "A":
+            partes_iva = [
+                f"IVA {float(a['porcentaje']):g}%: $ {_fmt(a['iva_ars'])}"
+                for a in tot_me["alicuotas"] if a["iva"]
+            ]
+        else:
+            partes_iva = ([f"IVA: $ {_fmt(tot_me['iva_ars'])}"]
+                          if tot_me["iva"] else [])
+        equiv_txt = "  -  ".join(
+            [f"Neto Gravado: $ {_fmt(tot_me['neto_ars'])}"] + partes_iva
+            + [f"Total: $ {_fmt(tot_me['total_ars'])}"])
+        equiv_lines = _wrap_by_width(c, equiv_txt, UW - 110, "Helvetica", 8)
+
+        leyenda_me = (
+            "El total de este comprobante expresado en moneda de curso legal"
+            " - Pesos Argentinos - considerándose un tipo de cambio consignado"
+            f" de {cot_txt} asciende a: $ {_fmt(tot_me['total_ars'])}")
+        leyenda_lines = _wrap_by_width(c, leyenda_me, UW - 14, "Helvetica", 8)
+
+        ME_H = 10 + 12 + len(equiv_lines) * 10 + 4 + len(leyenda_lines) * 10
+        _box(c, ML, y_after_tot, UW, ME_H, lw=0.75)
+        y_me = y_after_tot + 6
+        # _lv devuelve la x donde empieza el valor: se le suma su ancho.
+        mon_txt = f"{factura.moneda_arca} - {factura.get_moneda_display()}"
+        x_me = _lv(c, ML + 7, y_me, "Moneda:", mon_txt, sz=8)
+        x_me += c.stringWidth(mon_txt, "Helvetica", 8)
+        x_me = _lv(c, x_me + 18, y_me, "Tipo de cambio:", f"$ {cot_txt}", sz=8)
+        x_me += c.stringWidth(f"$ {cot_txt}", "Helvetica", 8)
+        if factura.cotizacion_fecha:
+            fecha_cot = _tz.localtime(factura.cotizacion_fecha)
+            _lv(c, x_me + 18, y_me, "Cotización del:",
+                fecha_cot.strftime("%d/%m/%Y %H:%M"), sz=8)
+        y_me += 12
+        _t(c, ML + 7, y_me, "Equivalente en pesos:", sz=8, bold=True)
+        for i, ln in enumerate(equiv_lines):
+            _t(c, ML + 100, y_me + i * 10, ln, sz=8)
+        y_me += len(equiv_lines) * 10 + 4
+        for i, ln in enumerate(leyenda_lines):
+            _t(c, ML + 7, y_me + i * 10, ln, sz=8, italic=True)
+        y_after_tot += ME_H
 
     # ══════════════════════════════════════════════════════════════════
     # 8. LEYENDA

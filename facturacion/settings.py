@@ -215,3 +215,19 @@ LOGGING = {
         },
     },
 }
+
+
+# ── Facturación en dólares: cotización automática ──────────────────────────
+# Ver facturas/cotizaciones.py. Son APIs públicas: no llevan clave.
+# Tipo de cotización de DolarAPI ('oficial', 'mayorista', 'blue', ...) y campo
+# ('venta' o 'compra'). ARCA (RG 5616/2024) pide el tipo vendedor del Banco
+# Nación del día hábil anterior: por eso el default es oficial / venta.
+COTIZACION_DOLAR_TIPO = 'oficial'
+COTIZACION_DOLAR_CAMPO = 'venta'
+COTIZACION_CACHE_SEGUNDOS = 600          # 10 minutos
+COTIZACION_TIMEOUT_SEGUNDOS = 4
+COTIZACION_DOLARAPI_URL = 'https://dolarapi.com/v1/dolares/{tipo}'
+COTIZACION_BLUELYTICS_URL = 'https://api.bluelytics.com.ar/v2/latest'
+# Si la cotización manual se desvía más que este % de la automática, se pide
+# confirmación explícita antes de guardar la factura.
+COTIZACION_DESVIO_MAXIMO_PCT = 10

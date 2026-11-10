@@ -53,7 +53,7 @@
                             {{ factura.cliente.nombre_completo }}
                         </a>
                     </td>
-                    <td class="mono" style="text-align:right;">${{ factura.total|floatformat:2 }}</td>
+                    <td class="mono" style="text-align:right;">{{ factura.simbolo_moneda }} {{ factura.total|floatformat:2 }}</td>
                     <td>
                         {% if factura.estado == 'AUTORIZADA' %}
                             <span class="badge badge-success">Autorizada</span>

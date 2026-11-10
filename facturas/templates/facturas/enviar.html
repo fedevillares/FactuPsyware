@@ -41,7 +41,7 @@
                         <td style="font-weight:500;">{{ factura.get_tipo_comprobante_display }}</td>
                         <td class="mono">{{ factura.numero_completo }}</td>
                         <td>{{ factura.cliente.nombre_completo }}</td>
-                        <td class="mono" style="text-align:right;">${{ factura.total|floatformat:2 }}</td>
+                        <td class="mono" style="text-align:right;">{{ factura.simbolo_moneda }} {{ factura.total|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -66,6 +66,56 @@
                         </div>
                     </div>
 
+                    <p class="section-label" style="margin-top:24px;">Moneda</p>
+                    <div class="info-grid">
+                        <div class="field">
+                            <label for="moneda">Moneda del comprobante</label>
+                            <select id="moneda" name="moneda" required>
+                                {% for valor, etiqueta in monedas %}
+                                <option value="{{ valor }}" {% if moneda == valor %}selected{% endif %}>{{ etiqueta }} ({{ valor }})</option>
+                                {% endfor %}
+                            </select>
+                            <p class="field-hint">Los precios de los ítems se cargan en esta moneda.</p>
+                        </div>
+                    </div>
+                    <div id="bloque-cotizacion" data-url="{% url 'cotizacion_dolar' %}" data-desvio-maximo="{{ desvio_maximo_pct|unlocalize }}"
+                         style="{% if moneda == 'ARS' %}display:none;{% endif %} padding:14px 16px; background:var(--bg-sunken); border-radius:var(--radius-sm); margin-bottom:8px;">
+                        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:10px;">
+                            <span style="font-weight:600;">Cotización del dólar</span>
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:500; cursor:pointer; margin:0; text-transform:none;">
+                                <input type="radio" name="cotizacion_modo" value="auto" {% if cotizacion_modo != 'manual' %}checked{% endif %}> Automática
+                            </label>
+                            <label style="display:flex; align-items:center; gap:6px; font-weight:500; cursor:pointer; margin:0; text-transform:none;">
+                                <input type="radio" name="cotizacion_modo" value="manual" {% if cotizacion_modo == 'manual' %}checked{% endif %}> Manual
+                            </label>
+                        </div>
+                        <div style="display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap;">
+                            <div class="field" style="margin:0;">
+                                <label for="cotizacion">Pesos por 1 dólar</label>
+                                <input type="number" step="0.000001" min="0.000001" max="9999.999999" id="cotizacion" name="cotizacion"
+                                       value="{{ cotizacion|default:'' }}" style="max-width:200px;">
+                            </div>
+                            <button type="button" class="btn btn-outline btn-sm" id="btn-actualizar-cotizacion">Actualizar cotización</button>
+                        </div>
+                        <p class="field-hint" id="cotizacion-info" style="margin-top:8px;"></p>
+                        <div id="aviso-desvio" class="alert alert-danger" {% if pedir_confirmacion_desvio %}data-forzado="1"{% endif %}
+                             style="{% if not pedir_confirmacion_desvio %}display:none;{% endif %} margin:8px 0 0;">
+                            <span id="aviso-desvio-texto">La cotización manual se desvía más de un {{ desvio_maximo_pct }}% de la automática.</span>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:6px 0 0; text-transform:none;">
+                                <input type="checkbox" name="confirmar_desvio" value="1" style="margin:0;"> Es correcta, usar igual esta cotización
+                            </label>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:10px 0 0; text-transform:none; font-weight:500;">
+                            <input type="checkbox" name="cancela_misma_moneda" value="1" style="margin:0;" {% if cancela_misma_moneda %}checked{% endif %}>
+                            El cliente paga en dólares (se informa a ARCA como "cancela en la misma moneda")
+                        </label>
+                        <p class="field-hint" style="margin-top:8px;">
+                            La cotización queda guardada en la factura. En modo automático se toma la vigente al momento de crearla;
+                            mientras sea borrador se puede cambiar desde el detalle. Los precios del catálogo están en pesos:
+                            al facturar en dólares revisá el precio unitario de cada ítem.
+                        </p>
+                    </div>
+
                     <p class="section-label" style="margin-top:24px;">Período facturado y vencimiento</p>
                     <p class="field-hint" style="margin-top:-8px; margin-bottom:14px;">Opcional. Si lo dejás vacío, ARCA recibe la fecha de hoy.</p>
                     <div class="info-grid" style="grid-template-columns:1fr 1fr 1fr;">
@@ -123,6 +173,10 @@
 
                     <button type="button" class="btn btn-outline btn-sm" id="btn-agregar-producto" style="margin-top:12px;">+ Agregar producto</button>
 
+                    <p class="section-label" style="margin-top:24px;">Totales</p>
+                    <div id="totales-vivo" style="max-width:380px; margin-left:auto; font-size:14px;"></div>
+                    <p class="field-hint" style="text-align:right;">Cálculo orientativo: los importes definitivos los calcula el sistema al guardar.</p>
+
                     <p class="section-label" style="margin-top:24px;">Notas</p>
                     <div class="field" style="margin-bottom:8px;">
                         <label for="observaciones">Observaciones (aparecen en el comprobante)</label>
@@ -168,5 +222,6 @@
     </template>
 
     <script src="{% static 'js/editar_nota.js' %}"></script>
+    <script src="{% static 'js/factura_totales.js' %}"></script>
 </body>
 </html>

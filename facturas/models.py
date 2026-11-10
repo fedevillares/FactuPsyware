@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from clientes.models import Cliente
 from servicios.models import Servicio
+from . import moneda as calculo_moneda
 
 
 class Factura(models.Model):
@@ -66,6 +67,34 @@ class Factura(models.Model):
         max_length=20, choices=ENTORNOS_EMISION, blank=True, null=True,
         verbose_name="Entorno de emisión",
         help_text="Se completa automáticamente al pedir el CAE. Permite identificar y borrar facturas de prueba emitidas en homologación."
+    )
+
+    # --- Moneda del comprobante ---
+    # Los precios de los ítems se cargan en la moneda del comprobante. La
+    # cotización queda guardada en la factura: no se recalcula después de
+    # emitir (el comprobante es inmutable).
+    MONEDAS = [
+        ('ARS', 'Pesos Argentinos'),
+        ('USD', 'Dólar Estadounidense'),
+    ]
+    moneda = models.CharField(max_length=3, choices=MONEDAS, default='ARS', verbose_name="Moneda")
+    cotizacion = models.DecimalField(
+        max_digits=16, decimal_places=6, default=1,
+        verbose_name="Cotización",
+        help_text="Pesos por 1 unidad de la moneda del comprobante. Siempre 1 para facturas en pesos."
+    )
+    cotizacion_fuente = models.CharField(
+        max_length=30, blank=True, default='',
+        verbose_name="Fuente de la cotización",
+        help_text="'manual' si se cargó a mano, 'api:<proveedor>' si se obtuvo automáticamente. Vacío en pesos."
+    )
+    cotizacion_fecha = models.DateTimeField(
+        blank=True, null=True, verbose_name="Fecha/hora de la cotización",
+        help_text="Momento en que se obtuvo (API) o se cargó (manual) la cotización."
+    )
+    cancela_misma_moneda = models.BooleanField(
+        default=False, verbose_name="Se cobra en la misma moneda extranjera",
+        help_text="Solo para moneda extranjera: se informa a ARCA en el campo CanMisMonExt (S/N)."
     )
 
     # --- Seguimiento interno de cobro y retenciones ---
@@ -160,6 +189,60 @@ class Factura(models.Model):
     @property
     def total(self):
         return self.subtotal + self.total_iva
+
+    # --- Moneda y cotización ---
+
+    @property
+    def es_moneda_extranjera(self):
+        return self.moneda != 'ARS'
+
+    @property
+    def simbolo_moneda(self):
+        return calculo_moneda.MONEDAS[self.moneda]['simbolo']
+
+    @property
+    def moneda_arca(self):
+        """Código de moneda de ARCA: 'PES' o 'DOL'."""
+        return calculo_moneda.MONEDAS[self.moneda]['arca']
+
+    @property
+    def moneda_codigo(self):
+        return self.moneda
+
+    @property
+    def moneda_nombre(self):
+        return self.get_moneda_display()
+
+    @property
+    def tipo_cambio(self):
+        return self.cotizacion
+
+    @property
+    def cotizacion_formateada(self):
+        return calculo_moneda.formato_cotizacion(self.cotizacion)
+
+    @property
+    def cotizacion_fuente_display(self):
+        if self.cotizacion_fuente == 'manual':
+            return 'Manual'
+        if self.cotizacion_fuente.startswith('api'):
+            proveedor = self.cotizacion_fuente.partition(':')[2]
+            return f"Automática ({proveedor})" if proveedor else 'Automática'
+        return self.cotizacion_fuente
+
+    @property
+    def totales(self):
+        """Importes del comprobante en Decimal (moneda del comprobante y
+        equivalente en pesos con la cotización guardada). Ver facturas/moneda.py."""
+        return calculo_moneda.calcular_totales(self.items.all(), self.cotizacion)
+
+    @property
+    def total_en_pesos(self):
+        """Total expresado en pesos con la cotización guardada. Para facturas
+        en pesos es exactamente `total`."""
+        if not self.es_moneda_extranjera:
+            return self.total
+        return float(self.totales['total_ars'])
 
     @property
     def desglose_iva(self):
