@@ -14,11 +14,22 @@ class Servicio(models.Model):
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     precio_unitario = models.DecimalField(max_digits=12, decimal_places=2)
+    # Moneda en la que está cargado el precio. Al facturar, si la factura
+    # está en la otra moneda, el precio se convierte con la cotización.
+    MONEDAS = [
+        ('ARS', 'Pesos Argentinos'),
+        ('USD', 'Dólar Estadounidense'),
+    ]
+    moneda = models.CharField(max_length=3, choices=MONEDAS, default='ARS', verbose_name="Moneda del precio")
     alicuota_iva = models.CharField(max_length=2, choices=ALICUOTAS_IVA, default='5')  # 21% por defecto
     activo = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre
+
+    @property
+    def simbolo_moneda(self):
+        return 'US$' if self.moneda == 'USD' else '$'
 
     @property
     def precio_con_iva(self):

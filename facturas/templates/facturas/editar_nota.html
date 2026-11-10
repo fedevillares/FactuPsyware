@@ -32,7 +32,7 @@
 
                     <p class="section-label" style="margin-top:24px;">Ítems de la nota</p>
                     <p class="field-hint">El nombre del producto se puede personalizar solo para esta nota, sin modificar el catálogo.</p>
-                    <table id="tabla-items">
+                    <table id="tabla-items" data-moneda="{{ factura.moneda }}" data-cotizacion="{{ factura.cotizacion|unlocalize }}">
                         <thead>
                             <tr>
                                 <th scope="col">Nombre del producto</th>

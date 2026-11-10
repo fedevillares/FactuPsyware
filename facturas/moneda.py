@@ -114,6 +114,21 @@ def calcular_totales(items, cotizacion=Decimal('1')):
     }
 
 
+def convertir_precio(precio, moneda_origen, moneda_destino, cotizacion):
+    """Convierte un precio entre pesos y dólares con `cotizacion` (pesos por
+    1 dólar). Dólares -> pesos multiplica; pesos -> dólares divide. Devuelve
+    el importe redondeado a 2 decimales."""
+    precio = a_decimal(precio)
+    if moneda_origen == moneda_destino:
+        return redondear(precio)
+    cotizacion = a_decimal(cotizacion)
+    if cotizacion <= 0:
+        raise ValueError("La cotización tiene que ser mayor a 0.")
+    if moneda_destino == 'ARS':
+        return redondear(precio * cotizacion)
+    return redondear(precio / cotizacion)
+
+
 def formato_ar(valor, decimales=2):
     """Formato argentino: punto de miles y coma decimal (1.234.567,89)."""
     valor = a_decimal(valor).quantize(Decimal(1).scaleb(-decimales), rounding=ROUND_HALF_UP)

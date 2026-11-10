@@ -9,7 +9,15 @@
         const inputPrecio = fila.querySelector('input[name$="-precio_unitario"]');
         const selectIva = fila.querySelector('select[name$="-alicuota_iva"]');
 
-        fetch('/servicios/datos/' + servicioId + '/')
+        // Moneda y cotización de la factura (si están en el formulario): el
+        // servidor convierte el precio cuando el servicio está en la otra moneda.
+        const moneda = document.getElementById('id_moneda');
+        const cotizacion = document.getElementById('id_cotizacion');
+        const params = new URLSearchParams();
+        if (moneda && moneda.value) params.set('moneda', moneda.value);
+        if (moneda && moneda.value !== 'ARS' && cotizacion && cotizacion.value) params.set('cotizacion', cotizacion.value);
+
+        fetch('/servicios/datos/' + servicioId + '/?' + params.toString())
             .then(response => response.json())
             .then(data => {
                 if (data.error) return;

@@ -10,7 +10,7 @@
         {% for servicio in servicios %}
         <li style="display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px; {% if not forloop.last %}border-bottom: 1px solid var(--hairline-color, #E6E1D2);{% endif %} background: var(--header-bg, #fff); font-size: 13.5px;">
             <span>{{ servicio.nombre }}</span>
-            <span style="font-family: var(--font-family-monospace, monospace); color: var(--body-quiet-color, #55584A);">$ {{ servicio.precio_unitario|floatformat:2 }}</span>
+            <span style="font-family: var(--font-family-monospace, monospace); color: var(--body-quiet-color, #55584A);">{{ servicio.simbolo_moneda }} {{ servicio.precio_unitario|floatformat:2 }}</span>
         </li>
         {% endfor %}
     </ul>

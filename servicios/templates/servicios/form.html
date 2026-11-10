@@ -40,6 +40,15 @@
                         <label for="descripcion">Descripción</label>
                         <textarea id="descripcion" name="descripcion" rows="3">{{ datos.descripcion }}</textarea>
                     </div>
+                    <div class="field">
+                        <label for="moneda">Moneda del precio</label>
+                        <select id="moneda" name="moneda" required>
+                            {% for valor, etiqueta in moneda_choices %}
+                            <option value="{{ valor }}" {% if datos.moneda == valor %}selected{% endif %}>{{ etiqueta }} ({{ valor }})</option>
+                            {% endfor %}
+                        </select>
+                        <p class="field-hint">Al facturar en la otra moneda, el precio se convierte solo con la cotización de la factura (o la automática del dólar).</p>
+                    </div>
                     <div class="info-grid">
                         <div class="field">
                             <label for="precio_unitario">Precio unitario (sin IVA)</label>

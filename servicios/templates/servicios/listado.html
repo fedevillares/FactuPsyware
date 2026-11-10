@@ -74,9 +74,9 @@
                                 <a href="{% url 'editar_servicio' servicio.id %}" style="font-weight:500;">{{ servicio.nombre }}</a>
                                 {% if servicio.descripcion %}<div class="faint" style="font-size:12px; margin-top:2px;">{{ servicio.descripcion|truncatechars:80 }}</div>{% endif %}
                             </td>
-                            <td class="mono" style="text-align:right;">${{ servicio.precio_unitario|floatformat:2 }}</td>
+                            <td class="mono" style="text-align:right;">{{ servicio.simbolo_moneda }} {{ servicio.precio_unitario|floatformat:2 }}</td>
                             <td>{{ servicio.get_alicuota_iva_display }}</td>
-                            <td class="mono faint" style="text-align:right;">${{ servicio.precio_con_iva|floatformat:2 }}</td>
+                            <td class="mono faint" style="text-align:right;">{{ servicio.simbolo_moneda }} {{ servicio.precio_con_iva|floatformat:2 }}</td>
                             <td>
                                 {% if servicio.activo %}
                                 <span class="badge badge-success">Activo</span>

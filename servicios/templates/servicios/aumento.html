@@ -33,7 +33,7 @@
                         {% for servicio in servicios %}
                         <tr>
                             <td>{{ servicio.nombre }}</td>
-                            <td class="mono faint" style="text-align:right;">${{ servicio.precio_unitario|floatformat:2 }}</td>
+                            <td class="mono faint" style="text-align:right;">{{ servicio.simbolo_moneda }} {{ servicio.precio_unitario|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

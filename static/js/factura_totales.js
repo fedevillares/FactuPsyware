@@ -158,6 +158,19 @@
         if (extranjera && !manual && automatica) inputCotizacion.value = automatica.valor;
         revisarDesvio();
         actualizarTotales();
+        avisarCambio();
+    }
+
+    // Avisa a static/js/editar_nota.js que cambió la moneda o la cotización,
+    // para que reconvierta los precios tomados del catálogo. Solo cuando el
+    // par moneda/cotización realmente cambió.
+    let ultimoAviso = null;
+    function avisarCambio() {
+        const clave = monedaActual() + '|' + (monedaActual() === 'ARS' ? '' : inputCotizacion.value);
+        if (clave === ultimoAviso) return;
+        const primero = ultimoAviso === null;
+        ultimoAviso = clave;
+        if (!primero) document.dispatchEvent(new Event('cotizacion-cambiada'));
     }
 
     function pedirCotizacion(forzar) {
@@ -242,6 +255,7 @@
         radio.addEventListener('change', aplicarModo);
     });
     inputCotizacion.addEventListener('input', function () { revisarDesvio(); actualizarTotales(); });
+    inputCotizacion.addEventListener('change', avisarCambio);
     if (botonActualizar) botonActualizar.addEventListener('click', function () { pedirCotizacion(true); });
 
     // Ítems: cualquier cambio en la tabla (incluye filas agregadas/quitadas y

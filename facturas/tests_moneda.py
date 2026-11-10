@@ -815,3 +815,128 @@ class MigracionMonedaTests(TransactionTestCase):
         self.assertEqual(factura.total_en_pesos, factura.total)
         self.assertEqual(factura.simbolo_moneda, '$')
         self.assertEqual(factura.moneda_arca, 'PES')
+
+
+# ── Servicios con precio en pesos o en dólares ──────────────────────────────
+
+class ServicioMonedaTests(VistasBase):
+    def setUp(self):
+        super().setUp()
+        from servicios.models import Servicio
+        self.Servicio = Servicio
+        self.en_pesos = Servicio.objects.create(nombre='Abono', precio_unitario=Decimal('157000.00'))
+        self.en_dolares = Servicio.objects.create(
+            nombre='Pericia', precio_unitario=Decimal('100.00'), moneda='USD', alicuota_iva='4')
+
+    def datos(self, servicio, **params):
+        return self.client.get(reverse('datos_servicio', args=[servicio.id]), params).json()
+
+    def test_servicio_existente_queda_en_pesos(self):
+        self.assertEqual(self.en_pesos.moneda, 'ARS')
+        self.assertEqual(self.en_pesos.simbolo_moneda, '$')
+        self.assertEqual(self.en_dolares.simbolo_moneda, 'US$')
+
+    def test_se_puede_editar_la_moneda_del_servicio(self):
+        respuesta = self.client.post(reverse('editar_servicio', args=[self.en_pesos.id]), {
+            'nombre': 'Abono', 'descripcion': '', 'precio_unitario': '120.00',
+            'moneda': 'USD', 'alicuota_iva': '5', 'activo': 'on',
+        })
+        self.assertEqual(respuesta.status_code, 302)
+        self.en_pesos.refresh_from_db()
+        self.assertEqual(self.en_pesos.moneda, 'USD')
+        self.assertEqual(self.en_pesos.precio_unitario, Decimal('120.00'))
+
+    def test_alta_con_moneda_y_moneda_invalida(self):
+        base = {'nombre': 'Nuevo', 'descripcion': '', 'precio_unitario': '50', 'alicuota_iva': '5', 'activo': 'on'}
+        self.client.post(reverse('nuevo_servicio'), {**base, 'moneda': 'USD'})
+        self.assertEqual(self.Servicio.objects.get(nombre='Nuevo').moneda, 'USD')
+        respuesta = self.client.post(reverse('nuevo_servicio'), {**base, 'nombre': 'Otro', 'moneda': 'EUR'})
+        self.assertContains(respuesta, 'moneda válida')
+        self.assertFalse(self.Servicio.objects.filter(nombre='Otro').exists())
+
+    def test_formulario_y_listado_muestran_la_moneda(self):
+        self.assertContains(self.client.get(reverse('nuevo_servicio')), 'name="moneda"')
+        respuesta = self.client.get(reverse('listado_servicios'))
+        self.assertContains(respuesta, 'US$ 100,00')
+        self.assertContains(respuesta, '$ 157.000,00')
+
+    @mock.patch('facturas.cotizaciones.get_rate')
+    def test_sin_moneda_devuelve_el_precio_tal_cual(self, get_rate):
+        datos = self.datos(self.en_dolares)
+        self.assertEqual(datos['precio_unitario'], '100.00')
+        self.assertEqual(datos['alicuota_iva'], '4')
+        self.assertFalse(datos['convertido'])
+        get_rate.assert_not_called()
+
+    @mock.patch('facturas.cotizaciones.get_rate')
+    def test_misma_moneda_no_convierte(self, get_rate):
+        self.assertEqual(self.datos(self.en_dolares, moneda='USD', cotizacion='1570')['precio_unitario'], '100.00')
+        self.assertEqual(self.datos(self.en_pesos, moneda='ARS')['precio_unitario'], '157000.00')
+        get_rate.assert_not_called()
+
+    @mock.patch('facturas.cotizaciones.get_rate')
+    def test_dolares_a_pesos_usa_la_cotizacion_automatica(self, get_rate):
+        get_rate.return_value = cotizacion_falsa('1570')
+        datos = self.datos(self.en_dolares, moneda='ARS')
+        self.assertEqual(datos['precio_unitario'], '157000.00')
+        self.assertTrue(datos['convertido'])
+        self.assertEqual(datos['cotizacion'], '1570')
+        self.assertEqual(datos['cotizacion_fuente'], 'api:dolarapi')
+        self.assertEqual(datos['precio_original'], '100.00')
+        self.assertEqual(datos['moneda'], 'USD')
+
+    @mock.patch('facturas.cotizaciones.get_rate')
+    def test_pesos_a_dolares_usa_la_cotizacion_elegida_en_la_factura(self, get_rate):
+        datos = self.datos(self.en_pesos, moneda='USD', cotizacion='1600,5')
+        # 157000 / 1600,5 = 98,0943... -> 98,09
+        self.assertEqual(datos['precio_unitario'], '98.09')
+        self.assertEqual(datos['cotizacion'], '1600.5')
+        self.assertEqual(datos['cotizacion_fuente'], 'factura')
+        get_rate.assert_not_called()
+
+    @mock.patch('facturas.cotizaciones.get_rate')
+    def test_cotizacion_invalida_cae_en_la_automatica(self, get_rate):
+        get_rate.return_value = cotizacion_falsa('1570')
+        for valor in ('', '0', '-3', 'abc'):
+            datos = self.datos(self.en_pesos, moneda='USD', cotizacion=valor)
+            self.assertEqual(datos['precio_unitario'], '100.00', valor)
+
+    @mock.patch('facturas.cotizaciones.get_rate')
+    def test_sin_cotizacion_disponible_no_rompe_y_avisa(self, get_rate):
+        get_rate.side_effect = cotizaciones.CotizacionNoDisponible('x')
+        datos = self.datos(self.en_dolares, moneda='ARS')
+        self.assertEqual(datos['precio_unitario'], '100.00')
+        self.assertFalse(datos['convertido'])
+        self.assertIn('revisalo a mano', datos['aviso'])
+
+    def test_conversion_redondea_half_up(self):
+        from .moneda import convertir_precio
+        self.assertEqual(convertir_precio('0.005', 'USD', 'ARS', '1'), Decimal('0.01'))
+        self.assertEqual(convertir_precio('100', 'ARS', 'USD', '3'), Decimal('33.33'))
+        self.assertEqual(convertir_precio('200', 'ARS', 'USD', '3'), Decimal('66.67'))
+        self.assertEqual(convertir_precio('10.555', 'ARS', 'ARS', '1570'), Decimal('10.56'))
+        with self.assertRaises(ValueError):
+            convertir_precio('100', 'ARS', 'USD', '0')
+
+
+class MigracionServicioMonedaTests(TransactionTestCase):
+    ANTES = [('servicios', '0001_initial')]
+    DESPUES = [('servicios', '0002_servicio_moneda')]
+
+    def tearDown(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+
+    def test_servicios_existentes_quedan_en_pesos(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.ANTES)
+        ServicioViejo = executor.loader.project_state(self.ANTES).apps.get_model('servicios', 'Servicio')
+        viejo = ServicioViejo.objects.create(nombre='Abono histórico', precio_unitario=Decimal('493300.00'))
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.DESPUES)
+
+        from servicios.models import Servicio
+        servicio = Servicio.objects.get(pk=viejo.pk)
+        self.assertEqual(servicio.moneda, 'ARS')
+        self.assertEqual(servicio.precio_unitario, Decimal('493300.00'))

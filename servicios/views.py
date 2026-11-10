@@ -8,18 +8,67 @@ from django.db import models
 from django.db.models import ProtectedError
 
 from .models import Servicio
+from facturas import cotizaciones
+from facturas.moneda import convertir_precio, redondear_cotizacion
 
 
 @login_required
 def datos_servicio(request, servicio_id):
+    """Datos del servicio para autocompletar una línea de factura.
+
+    Si se pasa `?moneda=ARS|USD` (la moneda de la factura) y el precio del
+    servicio está cargado en la otra moneda, `precio_unitario` vuelve ya
+    convertido. La cotización es la de `?cotizacion=` (la elegida en la
+    factura) o, si no viene, la automática (facturas/cotizaciones.py). Si no
+    hay forma de obtener una cotización, vuelve el precio sin convertir con
+    `convertido: false` y un `aviso`."""
     try:
         servicio = Servicio.objects.get(id=servicio_id)
-        return JsonResponse({
-            'precio_unitario': str(servicio.precio_unitario),
-            'alicuota_iva': servicio.alicuota_iva,
-        })
     except Servicio.DoesNotExist:
         return JsonResponse({'error': 'No encontrado'}, status=404)
+
+    datos = {
+        'precio_unitario': str(servicio.precio_unitario),
+        'alicuota_iva': servicio.alicuota_iva,
+        'moneda': servicio.moneda,
+        'precio_original': str(servicio.precio_unitario),
+        'convertido': False,
+    }
+
+    moneda_factura = request.GET.get('moneda', '').strip()
+    if moneda_factura not in dict(Servicio.MONEDAS) or moneda_factura == servicio.moneda:
+        return JsonResponse(datos)
+
+    cotizacion = None
+    try:
+        cotizacion = redondear_cotizacion(
+            Decimal(request.GET.get('cotizacion', '').strip().replace(',', '.'))
+        )
+        if cotizacion <= 0:
+            cotizacion = None
+    except (InvalidOperation, TypeError):
+        cotizacion = None
+    datos['cotizacion_fuente'] = 'factura'
+
+    if cotizacion is None:
+        try:
+            automatica = cotizaciones.get_rate()
+        except cotizaciones.CotizacionNoDisponible:
+            datos['aviso'] = (
+                f"El precio está cargado en {servicio.get_moneda_display()} y no se pudo obtener "
+                f"una cotización para convertirlo: revisalo a mano."
+            )
+            return JsonResponse(datos)
+        cotizacion = automatica['valor']
+        datos['cotizacion_fuente'] = automatica['fuente']
+
+    datos.update({
+        'precio_unitario': str(convertir_precio(
+            servicio.precio_unitario, servicio.moneda, moneda_factura, cotizacion)),
+        'convertido': True,
+        'cotizacion': f"{cotizacion.normalize():f}",
+    })
+    return JsonResponse(datos)
 
 
 @login_required
@@ -47,6 +96,7 @@ def listado_servicios(request):
 
 def _render_form(request, contexto):
     contexto.setdefault('alicuota_choices', Servicio.ALICUOTAS_IVA)
+    contexto.setdefault('moneda_choices', Servicio.MONEDAS)
     return render(request, 'servicios/form.html', contexto)
 
 
@@ -55,6 +105,7 @@ def _datos_form(request):
         'nombre': request.POST.get('nombre', '').strip(),
         'descripcion': request.POST.get('descripcion', '').strip(),
         'precio_unitario': request.POST.get('precio_unitario', '').strip(),
+        'moneda': request.POST.get('moneda', '').strip() or 'ARS',
         'alicuota_iva': request.POST.get('alicuota_iva', '').strip(),
         'activo': request.POST.get('activo') == 'on',
     }
@@ -69,6 +120,8 @@ def _validar(datos):
             return "El precio no puede ser negativo."
     except (InvalidOperation, TypeError):
         return "Ingresá un precio válido."
+    if datos['moneda'] not in dict(Servicio.MONEDAS):
+        return "Elegí una moneda válida para el precio."
     if datos['alicuota_iva'] not in dict(Servicio.ALICUOTAS_IVA):
         return "Elegí una alícuota de IVA válida."
     return None
@@ -85,7 +138,7 @@ def nuevo_servicio(request):
         Servicio.objects.create(**datos)
         return redirect('listado_servicios')
 
-    datos_iniciales = {'alicuota_iva': '5', 'activo': True}
+    datos_iniciales = {'alicuota_iva': '5', 'activo': True, 'moneda': 'ARS'}
     return _render_form(request, {'datos': datos_iniciales, 'es_nuevo': True})
 
 
@@ -110,6 +163,7 @@ def editar_servicio(request, servicio_id):
         'nombre': servicio.nombre,
         'descripcion': servicio.descripcion or '',
         'precio_unitario': servicio.precio_unitario,
+        'moneda': servicio.moneda,
         'alicuota_iva': servicio.alicuota_iva,
         'activo': servicio.activo,
     }
